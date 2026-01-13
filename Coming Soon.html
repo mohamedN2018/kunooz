@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>We're Launching Soon</title>
+  <meta name="description" content="A clean, responsive Coming Soon page with countdown and email signup." />
+  <meta name="theme-color" content="#111827" />
+  <!-- Tiny inline favicon (no external files) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>">
+  <style>
+    /* ---------- CSS Reset (trimmed) ---------- */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    img, picture, video, canvas, svg { display: block; max-width: 100%; }
+    input, button, textarea, select { font: inherit; }
+    
+    /* ---------- Theme ---------- */
+    :root {
+      --bg: #0b1220;         /* background */
+      --bg-elev: #0f172a;    /* elevated surface */
+      --fg: #e5e7eb;         /* primary text */
+      --muted: #9ca3af;      /* secondary text */
+      --accent: #22d3ee;     /* accent cyan */
+      --accent-2: #8b5cf6;   /* accent violet */
+      --danger: #ef4444;     /* error */
+      --ok: #22c55e;         /* success */
+      --ring: rgba(34, 211, 238, 0.45);
+      --radius-xl: 1.25rem;
+      --radius-2xl: 1.75rem;
+      --shadow-lg: 0 10px 25px rgba(0,0,0,.35);
+      --shadow-sm: 0 2px 8px rgba(0,0,0,.25);
+      --maxw: 62rem;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f7fafc;
+        --bg-elev: #ffffff;
+        --fg: #0b1220;
+        --muted: #475569;
+        --ring: rgba(139, 92, 246, 0.3);
+      }
+    }
+    body {
+      background: radial-gradient(1200px 1200px at 10% 10%, rgba(34,211,238,.15), transparent 60%),
+                  radial-gradient(1200px 1200px at 90% 20%, rgba(139,92,246,.12), transparent 55%),
+                  var(--bg);
+      color: var(--fg);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      display: grid;
+      place-items: center;
+      padding: 2rem;
+    }
+    .card {
+      width: min(100%, var(--maxw));
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)) , var(--bg-elev);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: var(--radius-2xl);
+      box-shadow: var(--shadow-lg);
+      padding: clamp(1.25rem, 2vw + 1rem, 2.25rem);
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .glow {
+      position: absolute; inset: -40%; z-index: -1; filter: blur(60px); opacity: .2;
+      background: conic-gradient(from 180deg at 50% 50%, var(--accent), var(--accent-2), var(--accent));
+    }
+    header {
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+    }
+    .brand { display: flex; align-items: center; gap: .9rem; text-decoration: none; color: inherit; }
+    .logo {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      display: grid; place-items: center; color: #0b1220; font-weight: 800;
+      box-shadow: var(--shadow-sm);
+    }
+    .brand h1 { font-size: 1.15rem; margin: 0; letter-spacing: .2px; }
+    .badge { 
+      font-size: .78rem; padding: .25rem .6rem; border-radius: 999px; 
+      background: rgba(34, 211, 238, .12); color: var(--accent); border: 1px solid rgba(34,211,238,.35);
+    }
+    
+    .hero { margin-top: 1.25rem; display: grid; gap: 1rem; }
+    .title { font-size: clamp(1.6rem, 1.2rem + 2.2vw, 2.6rem); line-height: 1.1; margin: 0; }
+    .subtitle { color: var(--muted); margin: 0; max-width: 60ch; }
+
+    /* Countdown */
+    .countdown { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; margin-top: 1.2rem; }
+    .unit {
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.03));
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: var(--radius-xl);
+      padding: .9rem .75rem;
+      text-align: center;
+    }
+    .num { font-weight: 800; font-size: clamp(1.3rem, 1rem + 2.2vw, 2.25rem); letter-spacing: .5px; }
+    .label { color: var(--muted); font-size: .8rem; margin-top: .15rem; }
+
+    /* Progress bar (time left %) */
+    .progress {
+      margin-top: 1rem; height: 10px; background: rgba(255,255,255,.08);
+      border-radius: 999px; overflow: hidden; border: 1px solid rgba(255,255,255,.08);
+    }
+    .bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); width: 0%; }
+
+    /* Signup */
+    .signup { margin-top: 1.25rem; display: grid; gap: .75rem; }
+    .form-row { display: grid; grid-template-columns: 1fr auto; gap: .5rem; }
+    input[type="email"] {
+      background: rgba(255,255,255,.06); color: var(--fg);
+      border: 1px solid rgba(255,255,255,.16); border-radius: 12px; padding: .85rem .95rem;
+      outline: none; width: 100%;
+    }
+    input[type="email"]:focus { box-shadow: 0 0 0 6px var(--ring); border-color: transparent; }
+    button {
+      border: 0; cursor: pointer; padding: .85rem 1.1rem; border-radius: 12px; font-weight: 700; letter-spacing: .2px;
+      color: #0b1220; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    }
+    .note { color: var(--muted); font-size: .85rem; }
+    .msg { font-size: .9rem; font-weight: 600; }
+    .msg.ok { color: var(--ok); }
+    .msg.err { color: var(--danger); }
+
+    /* Socials */
+    .socials { display: flex; gap: .6rem; margin-top: .75rem; }
+    .socials a { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); color: var(--fg); }
+    .socials a:focus-visible { outline: none; box-shadow: 0 0 0 6px var(--ring); }
+
+    footer { margin-top: 1.25rem; color: var(--muted); font-size: .85rem; display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+    .made { opacity: .8; }
+
+    /* Responsive */
+    @media (max-width: 560px) {
+      .form-row { grid-template-columns: 1fr; }
+      .countdown { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <main class="card" aria-labelledby="hero-title">
+    <div class="glow" aria-hidden="true"></div>
+
+    <header>
+      <a class="brand" href="#" aria-label="Brand home">
+        <div class="logo" aria-hidden="true">⚡</div>
+        <h1>konoz</h1>
+      </a>
+      <span class="badge">Coming Soon</span>
+    </header>
+
+    <section class="hero">
+      <h2 id="hero-title" class="title">We're building something awesome</h2>
+      <p class="subtitle">Our new website is on the way. Subscribe to get an early invite and exclusive launch perks.</p>
+
+      <!-- Countdown -->
+      <div class="countdown" aria-live="polite" aria-label="Countdown to launch">
+        <div class="unit" role="group" aria-label="Days">
+          <div class="num" id="days">00</div>
+          <div class="label">Days</div>
+        </div>
+        <div class="unit" role="group" aria-label="Hours">
+          <div class="num" id="hours">00</div>
+          <div class="label">Hours</div>
+        </div>
+        <div class="unit" role="group" aria-label="Minutes">
+          <div class="num" id="mins">00</div>
+          <div class="label">Minutes</div>
+        </div>
+        <div class="unit" role="group" aria-label="Seconds">
+          <div class="num" id="secs">00</div>
+          <div class="label">Seconds</div>
+        </div>
+      </div>
+
+      <!-- Progress bar (time elapsed between start and launch) -->
+      <div class="progress" aria-label="Progress towards launch">
+        <div class="bar" id="progressBar"></div>
+      </div>
+
+      <!-- Email signup -->
+      <form class="signup" id="signupForm" aria-label="Email signup" novalidate>
+        <div class="form-row">
+          <label class="sr-only" for="email">Email address</label>
+          <input type="email" id="email" name="email" placeholder="Enter your email" autocomplete="email" required />
+          <button type="submit" aria-label="Notify me">Notify me</button>
+        </div>
+        <div class="note">We’ll only email you about the launch. No spam. Unsubscribe anytime.</div>
+        <div class="msg" id="formMsg" role="status" aria-live="polite"></div>
+      </form>
+
+      <!-- Social links (replace hrefs) -->
+      <nav class="socials" aria-label="Social media">
+        <a href="#" aria-label="Twitter / X" title="Twitter / X">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2H21.5l-7.66 8.75L23.5 22h-6.98l-5.46-6.51L4.78 22H1.52l8.2-9.38L.5 2h7.1l4.94 5.8L18.24 2Zm-1.22 18h1.89L7.06 4H5.06l11.96 16Z"/></svg>
+        </a>
+        <a href="#" aria-label="Facebook" title="Facebook">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 12a10 10 0 1 0-11.5 9.9v-7h-2v-3h2v-2.3c0-2 1.2-3.1 3-3.1.9 0 1.9.2 1.9.2v2h-1.1c-1 0-1.3.6-1.3 1.2V12h2.2l-.4 3h-1.8v7A10 10 0 0 0 22 12Z"/></svg>
+        </a>
+        <a href="#" aria-label="Instagram" title="Instagram">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.2c3 0 3.4 0 4.6.1 2.9.2 4.3 1.5 4.5 4.5.1 1.2.1 1.6.1 4.6s0 3.4-.1 4.6c-.2 2.9-1.5 4.3-4.5 4.5-1.2.1-1.6.1-4.6.1s-3.4 0-4.6-.1c-2.9-.2-4.3-1.5-4.5-4.5C2 15.4 2 15 2 12s0-3.4.1-4.6c.2-2.9 1.5-4.3 4.5-4.5 1.2-.1 1.6-.1 4.6-.1Zm0 1.8c-2.9 0-3.3 0-4.5.1-2 .1-3 .9-3.1 3.1-.1 1.2-.1 1.6-.1 4.5s0 3.3.1 4.5c.1 2 .9 3 3.1 3.1 1.2.1 1.6.1 4.5.1s3.3 0 4.5-.1c2-.1 3-.9 3.1-3.1.1-1.2.1-1.6.1-4.5s0-3.3-.1-4.5c-.1-2-.9-3-3.1-3.1-1.2-.1-1.6-.1-4.5-.1Zm0 3.1a5.8 5.8 0 1 1 0 11.6 5.8 5.8 0 0 1 0-11.6Zm0 1.8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm5.9-.9a1.3 1.3 0 1 1-2.5 0 1.3 1.3 0 0 1 2.5 0Z"/></svg>
+        </a>
+        <a href="#" aria-label="LinkedIn" title="LinkedIn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.55v-5.3c0-1.26-.02-2.88-1.76-2.88-1.77 0-2.04 1.38-2.04 2.79v5.39H9.55V9h3.4v1.56h.05c.47-.9 1.61-1.85 3.31-1.85 3.54 0 4.19 2.33 4.19 5.35v6.39ZM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12Zm1.78 13.02H3.56V9h3.56v11.45Z"/></svg>
+        </a>
+      </nav>
+    </section>
+
+    <footer>
+      <span>© <span id="year"></span> konoz . All rights reserved.</span>
+      <span class="made">Made with ❤ for the web.</span>
+    </footer>
+  </main>
+
+  <script>
+    // ======= Customize these two dates =======
+    // LAUNCH_DATE: when the site should go live
+    // START_DATE: when your project "started" (for progress calculation)
+    const LAUNCH_DATE = new Date('2026-01-31T18:00:00'); 
+    const START_DATE  = new Date('2026-01-11T09:00:00');
+    // =========================================
+
+    const daysEl = document.getElementById('days');
+    const hoursEl = document.getElementById('hours');
+    const minsEl = document.getElementById('mins');
+    const secsEl = document.getElementById('secs');
+    const barEl = document.getElementById('progressBar');
+    const yearEl = document.getElementById('year');
+    yearEl.textContent = new Date().getFullYear();
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    function updateCountdown() {
+      const now = new Date();
+      const diff = LAUNCH_DATE - now;
+
+      if (diff <= 0) {
+        daysEl.textContent = '00';
+        hoursEl.textContent = '00';
+        minsEl.textContent = '00';
+        secsEl.textContent = '00';
+        document.title = 'We\'re Live!';
+      } else {
+        const d = Math.floor(diff / (1000*60*60*24));
+        const h = Math.floor((diff / (1000*60*60)) % 24);
+        const m = Math.floor((diff / (1000*60)) % 60);
+        const s = Math.floor((diff / 1000) % 60);
+        daysEl.textContent = pad(d);
+        hoursEl.textContent = pad(h);
+        minsEl.textContent = pad(m);
+        secsEl.textContent = pad(s);
+        document.title = `⏳ ${pad(d)}d ${pad(h)}h ${pad(m)}m ${pad(s)}s – Coming Soon`;
+      }
+
+      // Progress bar from START_DATE to LAUNCH_DATE
+      const total = LAUNCH_DATE - START_DATE;
+      const elapsed = Math.min(Math.max(new Date() - START_DATE, 0), total);
+      const pct = total > 0 ? (elapsed / total) * 100 : 100;
+      barEl.style.width = pct + '%';
+      barEl.setAttribute('aria-valuenow', pct.toFixed(0));
+    }
+
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+
+    // Simple email form handling (client-side only)
+    const form = document.getElementById('signupForm');
+    const emailInput = document.getElementById('email');
+    const formMsg = document.getElementById('formMsg');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      formMsg.textContent = '';
+      formMsg.className = 'msg';
+
+      const email = emailInput.value.trim();
+      const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+      if (!valid) {
+        formMsg.textContent = 'Please enter a valid email address.';
+        formMsg.classList.add('err');
+        emailInput.focus();
+        return;
+      }
+
+      // ---- Integration points ----
+      // Replace with your API/Mailchimp action. Example:
+      // fetch('https://example.com/api/subscribe', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ email }) })
+      //   .then(() => { ... })
+
+      // Simulate success for demo
+      setTimeout(() => {
+        formMsg.textContent = 'Thanks! You\'re on the list.';
+        formMsg.classList.add('ok');
+        form.reset();
+      }, 500);
+    });
+  </script>
+
+  <!-- Optional: hide label text but keep it accessible -->
+  <style>
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+  </style>
+</body>
+</html>
