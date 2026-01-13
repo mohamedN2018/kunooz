@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  website:
+    build: .
+    container_name: static_site
+    ports:
+      - "80:80"
+    restart: always
+    volumes:
+      - .:/usr/share/nginx/html
