@@ -1,0 +1,104 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="{% static 'admin/js/jquery.init.js' %}"></script>
+<script src="{% static 'admin/js/ckeditor/ckeditor.js' %}"></script>
+<style>
+    .content-builder-link {
+        background: #28a745;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 4px;
+        text-decoration: none;
+        display: inline-block;
+        margin: 10px 0;
+    }
+    .content-builder-link:hover {
+        background: #218838;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block object-tools %}
+{% if change %}
+    <ul class="object-tools">
+        {% block object-tools-items %}
+        <li>
+            <a href="{% url 'admin:blog_post_content_builder' original.pk %}" class="content-builder-link">
+                🛠️ {% trans "Advanced Content Builder" %}
+            </a>
+        </li>
+        <li>
+            {% url opts|admin_urlname:'history' original.pk|admin_urlquote as history_url %}
+            <a href="{% add_preserved_filters history_url %}" class="historylink">{% trans "History" %}</a>
+        </li>
+        {% if has_absolute_url %}
+        <li>
+            <a href="{{ absolute_url }}" class="viewsitelink">{% trans "View on site" %}</a>
+        </li>
+        {% endif %}
+        {% endblock %}
+    </ul>
+{% endif %}
+{% endblock %}
+
+{% block field_sets %}
+{% for fieldset in adminform %}
+    {% if fieldset.name == "المحتوى الرئيسي" %}
+        <fieldset class="module aligned {{ fieldset.classes }}">
+            <h2>{{ fieldset.name }}</h2>
+            {% if fieldset.description %}
+            <div class="description">{{ fieldset.description|safe }}</div>
+            {% endif %}
+            
+            {% for line in fieldset %}
+                <div class="form-row{% if line.fields|length_is:'1' and line.errors %} errors{% endif %}{% if not line.has_visible_field %} hidden{% endif %}{% for field in line %}{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% endfor %}">
+                    {% if line.fields|length_is:'1' %}{{ line.errors }}{% endif %}
+                    {% for field in line %}
+                        <div{% if not line.fields|length_is:'1' %} class="field-box{% if field.field.name == 'content' %} full-width{% endif %}{% if not field.is_readonly and field.errors %} errors{% endif %}{% if field.field.is_hidden %} hidden{% endif %}"{% elif field.is_checkbox %} class="checkbox-row"{% endif %}>
+                            {% if not line.fields|length_is:'1' and not field.is_readonly %}{{ field.errors }}{% endif %}
+                            {% if field.is_checkbox %}
+                                {{ field.field }}{{ field.label_tag }}
+                            {% else %}
+                                {{ field.label_tag }}
+                                {% if field.is_readonly %}
+                                    <div class="readonly">{{ field.contents }}</div>
+                                {% else %}
+                                    {{ field.field }}
+                                {% endif %}
+                            {% endif %}
+                            {% if field.field.help_text %}
+                                <div class="help">{{ field.field.help_text|safe }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </fieldset>
+        
+        <div class="module aligned">
+            <h2>🎨 محرر المحتوى المتقدم (الكتل)</h2>
+            <div class="description" style="background: #e7f3ff; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                <p><strong>💡 طريقة الاستخدام:</strong></p>
+                <ol style="margin-left: 20px;">
+                    <li>أضف كتل نصية أو صور باستخدام القسم أدناه</li>
+                    <li>اسحب وأفلت الكتل لترتيبها كما تريد</li>
+                    <li>استخدم زر "تعديل مفصل" للتحرير المتقدم</li>
+                    <li>المحتوى الأساسي أعلاه سيظهر قبل الكتل في المقال</li>
+                </ol>
+            </div>
+            
+            {% for inline_admin_formset in inline_admin_formsets %}
+                {% if inline_admin_formset.opts.verbose_name == "PostBlock" %}
+                    {% include inline_admin_formset.opts.template %}
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% else %}
+        {{ block.super }}
+    {% endif %}
+{% endfor %}
+{% endblock %}

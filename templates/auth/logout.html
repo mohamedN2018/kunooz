@@ -1,0 +1,85 @@
+<!-- templates/auth/logout.html -->
+{% extends 'base.html' %}
+
+{% block title %}تسجيل الخروج - كنوز{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
+    <div class="max-w-md w-full space-y-8">
+        <div class="text-center">
+            <div class="flex justify-center">
+                <div class="w-20 h-20 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-full flex items-center justify-center">
+                    <i class="fas fa-sign-out-alt text-white text-3xl"></i>
+                </div>
+            </div>
+            <h2 class="mt-6 text-center text-3xl font-bold text-gray-900">
+                تسجيل الخروج
+            </h2>
+            <p class="mt-4 text-gray-600 text-lg">
+                هل أنت متأكد أنك تريد تسجيل الخروج؟
+            </p>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-user text-white text-xl"></i>
+                </div>
+                <p class="text-gray-700">
+                    أنت مسجل الدخول كـ
+                </p>
+                <p class="text-xl font-bold text-gray-900 mt-1">
+                    {{ user.username }}
+                </p>
+            </div>
+            
+            <div class="space-y-4">
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" 
+                            class="w-full py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-red-500 to-orange-600 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex items-center justify-center">
+                        <i class="fas fa-sign-out-alt ml-2"></i>
+                        نعم، سجلني خروجًا
+                    </button>
+                </form>
+                
+                <a href="{% url 'home' %}" 
+                   class="w-full py-3 px-4 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center justify-center">
+                    <i class="fas fa-times ml-2"></i>
+                    إلغاء والعودة للرئيسية
+                </a>
+            </div>
+            
+            <div class="mt-8 pt-6 border-t border-gray-200">
+                <p class="text-center text-gray-500 text-sm">
+                    بعد تسجيل الخروج، ستحتاج إلى إعادة تسجيل الدخول للوصول إلى حسابك.
+                </p>
+            </div>
+        </div>
+        
+        <div class="text-center">
+            <p class="text-gray-600">بدائل أخرى:</p>
+            <div class="mt-4 flex justify-center space-x-4 space-x-reverse">
+                <a href="{% url 'profile' %}" class="text-blue-600 hover:text-blue-800">
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-blue-600"></i>
+                    </div>
+                    <p class="text-xs mt-1">ملفي</p>
+                </a>
+                <a href="{% url 'dashboard' %}" class="text-green-600 hover:text-green-800">
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-tachometer-alt text-green-600"></i>
+                    </div>
+                    <p class="text-xs mt-1">لوحة التحكم</p>
+                </a>
+                <a href="{% url 'about' %}" class="text-purple-600 hover:text-purple-800">
+                    <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-info-circle text-purple-600"></i>
+                    </div>
+                    <p class="text-xs mt-1">عن الموقع</p>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,445 @@
+<!-- templates/search/search_results.html -->
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if query %}
+        نتائج البحث عن "{{ query }}" - كنوز
+    {% else %}
+        البحث - كنوز
+    {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-highlight {
+        background-color: #fff3cd;
+        padding: 2px 4px;
+        border-radius: 3px;
+    }
+    
+    .category-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        margin-right: 8px;
+    }
+    
+    .category-courses { background-color: #e3f2fd; color: #1565c0; }
+    .category-articles { background-color: #f3e5f5; color: #7b1fa2; }
+    .category-grants { background-color: #e8f5e9; color: #2e7d32; }
+    .category-books { background-color: #fff3e0; color: #ef6c00; }
+    
+    .search-stats {
+        transition: all 0.3s ease;
+    }
+    
+    .search-stats:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div class="container mx-auto px-4">
+        <!-- شريط البحث الرئيسي -->
+        <div class="mb-8">
+            <form method="get" action="{% url 'search' %}" 
+                  class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <div class="flex flex-col md:flex-row gap-4 items-center">
+                    <div class="flex-1 w-full">
+                        <div class="relative">
+                            <input
+                                type="text"
+                                name="q"
+                                value="{{ query }}"
+                                placeholder="ابحث عن كورسات، مقالات، منح، كتب وملخصات..."
+                                class="w-full px-6 py-4 pr-12 text-gray-700 dark:text-white
+                                       bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600
+                                       rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                                       outline-none transition"
+                                autocomplete="off">
+                            <div class="absolute left-4 top-1/2 transform -translate-y-1/2">
+                                <i class="fas fa-search text-gray-400"></i>
+                            </div>
+                        </div>
+                        {% if suggestions %}
+                        <div class="mt-2 text-sm text-gray-500">
+                            <span class="font-medium">اقتراحات:</span>
+                            {% for suggestion in suggestions %}
+                                <a href="{% url 'search' %}?q={{ suggestion|urlencode }}" 
+                                   class="text-blue-600 hover:text-blue-800 mr-2">
+                                    {{ suggestion }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <button
+                        type="submit"
+                        class="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 
+                               hover:from-blue-700 hover:to-purple-700 text-white
+                               rounded-lg font-medium transition flex items-center justify-center
+                               whitespace-nowrap">
+                        <i class="fas fa-search ml-2"></i>
+                        بحث
+                    </button>
+                </div>
+                
+                <!-- فلاتر البحث -->
+                <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <div class="flex flex-wrap gap-4 items-center">
+                        <div>
+                            <span class="text-gray-700 dark:text-gray-300 font-medium ml-2">تصفية:</span>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <a href="{% url 'search' %}?q={{ query|urlencode }}" 
+                                   class="px-4 py-2 rounded-full text-sm {% if not category_filter %}bg-blue-100 text-blue-700{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300{% endif %}">
+                                    الكل
+                                </a>
+                                {% for cat in available_categories %}
+                                <a href="{% url 'search' %}?q={{ query|urlencode }}&category={{ cat.category_type }}" 
+                                   class="px-4 py-2 rounded-full text-sm {% if category_filter == cat.category_type %}bg-blue-100 text-blue-700{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300{% endif %}">
+                                    <i class="fas {{ cat.icon|default:'fa-folder' }} ml-1"></i>
+                                    {{ cat.get_category_type_display }}
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="mr-auto">
+                            <span class="text-gray-700 dark:text-gray-300 font-medium ml-2">ترتيب حسب:</span>
+                            <select name="sort" 
+                                    onchange="this.form.submit()"
+                                    class="mt-2 px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 
+                                           rounded-lg text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-blue-500">
+                                <option value="relevance" {% if sort_by == 'relevance' %}selected{% endif %}>
+                                    الأكثر صلة
+                                </option>
+                                <option value="date" {% if sort_by == 'date' %}selected{% endif %}>
+                                    الأحدث
+                                </option>
+                                <option value="title" {% if sort_by == 'title' %}selected{% endif %}>
+                                    العنوان (أ-ي)
+                                </option>
+                                <option value="popularity" {% if sort_by == 'popularity' %}selected{% endif %}>
+                                    الأكثر مشاهدة
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <!-- نتائج البحث -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <!-- الشريط الجانبي للإحصائيات -->
+            <div class="lg:col-span-1">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sticky top-24">
+                    <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-6">
+                        <i class="fas fa-chart-bar text-blue-500 ml-2"></i>
+                        إحصائيات البحث
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="search-stats bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-600 dark:text-gray-400">النتائج الكلية</span>
+                                <span class="text-2xl font-bold text-gray-800 dark:text-white">
+                                    {{ search_stats.total }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="search-stats bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <i class="fas fa-graduation-cap text-blue-500 ml-2"></i>
+                                    <span class="text-gray-700 dark:text-gray-300">الكورسات</span>
+                                </div>
+                                <span class="text-xl font-bold text-blue-600 dark:text-blue-400">
+                                    {{ search_stats.courses }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="search-stats bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <i class="fas fa-newspaper text-purple-500 ml-2"></i>
+                                    <span class="text-gray-700 dark:text-gray-300">المقالات</span>
+                                </div>
+                                <span class="text-xl font-bold text-purple-600 dark:text-purple-400">
+                                    {{ search_stats.articles }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="search-stats bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <i class="fas fa-award text-green-500 ml-2"></i>
+                                    <span class="text-gray-700 dark:text-gray-300">المنح</span>
+                                </div>
+                                <span class="text-xl font-bold text-green-600 dark:text-green-400">
+                                    {{ search_stats.grants }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="search-stats bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <i class="fas fa-book text-amber-500 ml-2"></i>
+                                    <span class="text-gray-700 dark:text-gray-300">الكتب</span>
+                                </div>
+                                <span class="text-xl font-bold text-amber-600 dark:text-amber-400">
+                                    {{ search_stats.books }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if query and search_stats.total > 0 %}
+                    <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-3">
+                            <i class="fas fa-lightbulb text-yellow-500 ml-2"></i>
+                            نصائح للبحث
+                        </h4>
+                        <ul class="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                            <li>• استخدم علامات الاقتباس للبحث الدقيق</li>
+                            <li>• استخدم علامة - لاستبعاد كلمة</li>
+                            <li>• استخدم OR للبحث عن أحد البدائل</li>
+                            <li>• حاول استخدام المرادفات للكلمات</li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- النتائج الرئيسية -->
+            <div class="lg:col-span-3">
+                {% if query %}
+                    {% if results %}
+                        <!-- عنوان النتائج -->
+                        <div class="mb-6">
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
+                                <i class="fas fa-search text-blue-500 ml-2"></i>
+                                نتائج البحث عن "{{ query }}"
+                            </h2>
+                            <p class="text-gray-600 dark:text-gray-400 mt-2">
+                                عثرنا على {{ search_stats.total }} نتيجة
+                            </p>
+                        </div>
+                        
+                        <!-- عرض النتائج -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {% for result in results %}
+                            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden
+                                        hover:shadow-lg transition duration-300">
+                                <div class="p-6">
+                                    <!-- فئة النتيجة -->
+                                    <div class="mb-3">
+                                        <span class="category-badge category-{{ result.category.category_type }}">
+                                            <i class="fas {{ result.category.icon|default:'fa-folder' }} ml-1"></i>
+                                            {{ result.category.name }}
+                                        </span>
+                                        <span class="text-sm text-gray-500">
+                                            <i class="far fa-calendar ml-1"></i>
+                                            {{ result.publish_date|date:"Y-m-d" }}
+                                        </span>
+                                    </div>
+                                    
+                                    <!-- عنوان النتيجة -->
+                                    <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-3">
+                                        <a href="{{ result.get_absolute_url }}" 
+                                           class="hover:text-blue-600 transition">
+                                            {{ result.title }}
+                                        </a>
+                                    </h3>
+                                    
+                                    <!-- مقتطف من المحتوى -->
+                                    <p class="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">
+                                        {% if query in result.excerpt %}
+                                            {{ result.excerpt|safe }}
+                                        {% elif result.excerpt %}
+                                            {{ result.excerpt|safe|truncatechars:150 }}
+                                        {% else %}
+                                            {{ result.content|striptags|truncatechars:150 }}
+                                        {% endif %}
+                                    </p>
+                                    
+                                    <!-- معلومات إضافية -->
+                                    <div class="flex items-center justify-between mt-4 pt-4 
+                                                border-t border-gray-100 dark:border-gray-700">
+                                        <div class="flex items-center text-sm text-gray-500">
+                                            <i class="far fa-eye ml-1"></i>
+                                            <span>{{ result.views|default:0 }}</span>
+                                            <i class="far fa-comment ml-3"></i>
+                                            <span>{{ result.comments.count }}</span>
+                                        </div>
+                                        <a href="{{ result.get_absolute_url }}" 
+                                           class="text-blue-600 hover:text-blue-800 font-medium">
+                                            اقرأ المزيد
+                                            <i class="fas fa-arrow-left"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- الترقيم -->
+                        {% if results.paginator.num_pages > 1 %}
+                        <div class="mt-12 flex justify-center">
+                            <nav class="flex items-center space-x-2 space-x-reverse">
+                                {% if results.has_previous %}
+                                <a href="?q={{ query|urlencode }}&page={{ results.previous_page_number }}&category={{ category_filter }}&sort={{ sort_by }}"
+                                   class="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg 
+                                          text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                                {% endif %}
+                                
+                                {% for num in results.paginator.page_range %}
+                                    {% if results.number == num %}
+                                    <span class="px-4 py-2 bg-blue-600 text-white rounded-lg">
+                                        {{ num }}
+                                    </span>
+                                    {% elif num > results.number|add:'-3' and num < results.number|add:'3' %}
+                                    <a href="?q={{ query|urlencode }}&page={{ num }}&category={{ category_filter }}&sort={{ sort_by }}"
+                                       class="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg 
+                                              text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">
+                                        {{ num }}
+                                    </a>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if results.has_next %}
+                                <a href="?q={{ query|urlencode }}&page={{ results.next_page_number }}&category={{ category_filter }}&sort={{ sort_by }}"
+                                   class="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg 
+                                          text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                                {% endif %}
+                            </nav>
+                        </div>
+                        {% endif %}
+                        
+                    {% else %}
+                        <!-- حالة عدم وجود نتائج -->
+                        <div class="text-center py-16">
+                            <div class="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full 
+                                        flex items-center justify-center mx-auto mb-6">
+                                <i class="fas fa-search text-gray-400 text-3xl"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+                                لا توجد نتائج لـ "{{ query }}"
+                            </h3>
+                            <p class="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
+                                لم نعثر على أي محتوى مطابق لبحثك. حاول استخدام كلمات أخرى أو تحقق من الإملاء.
+                            </p>
+                            <div class="space-y-4">
+                                <h4 class="font-medium text-gray-700 dark:text-gray-300">
+                                    جرب إحدى هذه الخيارات:
+                                </h4>
+                                <ul class="text-gray-600 dark:text-gray-400 space-y-2">
+                                    <li>• استخدم كلمات بحث أكثر عمومية</li>
+                                    <li>• تحقق من صحة الإملاء</li>
+                                    <li>• تصفح <a href="{% url 'courses' %}" class="text-blue-600 hover:text-blue-800">الكورسات</a></li>
+                                    <li>• تصفح <a href="{% url 'articles' %}" class="text-blue-600 hover:text-blue-800">المقالات</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <!-- حالة عدم إدخال كلمة بحث -->
+                    <div class="text-center py-16">
+                        <div class="w-24 h-24 bg-blue-50 dark:bg-blue-900/20 rounded-full 
+                                    flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-search text-blue-500 text-3xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+                            ابحث عن المحتوى الذي تريده
+                        </h3>
+                        <p class="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
+                            اكتب كلمة أو جملة في مربع البحث أعلاه للعثور على الكورسات، المقالات، المنح، والكتب.
+                        </p>
+                        
+                        <!-- كلمات بحث شائعة -->
+                        <div class="mt-8">
+                            <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-4">
+                                <i class="fas fa-fire text-red-500 ml-2"></i>
+                                كلمات بحث شائعة
+                            </h4>
+                            <div class="flex flex-wrap justify-center gap-3">
+                            {% for popular_term in popular_terms %}
+                            <a href="{% url 'search' %}?query={{ popular_term|urlencode }}" 
+                            class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full 
+                                    text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">
+                                {{ popular_term }}
+                            </a>
+                            {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        // الاكتمال التلقائي للبحث
+        let searchInput = document.querySelector('input[name="q"]');
+        let timeout = null;
+
+        searchInput.addEventListener('input', function(e) {
+            clearTimeout(timeout);
+            
+            timeout = setTimeout(function() {
+                let query = e.target.value.trim();
+                
+                if (query.length >= 2) {
+                    fetch(`/search/autocomplete/?term=${encodeURIComponent(query)}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // هنا يمكنك عرض الاقتراحات
+                        console.log('Suggestions:', data);
+                        // يمكنك إضافة منطق لعرض القائمة المنسدلة
+                    })
+                    .catch(error => console.error('Error:', error));
+                }
+            }, 300); // تأخير 300ms
+        });
+
+        // تمييز نص البحث في النتائج
+        function highlightText(text, query) {
+            if (!query) return text;
+            
+            const regex = new RegExp(`(${query})`, 'gi');
+            return text.replace(regex, '<span class="search-highlight">$1</span>');
+        }
+
+        // تطبيق التمييز عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            const query = '{{ query|escapejs }}';
+            if (query) {
+                // تمييز النصوص في النتائج
+                document.querySelectorAll('.search-result-title, .search-result-excerpt').forEach(el => {
+                    el.innerHTML = highlightText(el.innerHTML, query);
+                });
+            }
+        });
+    </script>
+{% endblock %}

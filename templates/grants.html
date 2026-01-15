@@ -1,0 +1,677 @@
+{% extends 'base.html' %}
+
+{% block title %}المنح والتدريبات - كنوز{% endblock %}
+
+{% block content %}
+<!-- الهيرو -->
+<section class="bg-gradient-to-r from-yellow-500 to-orange-600 text-white py-16">
+    <div class="container mx-auto px-4">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-bold mb-4">المنح والتدريبات</h1>
+                <p class="text-xl opacity-90">فرص منح دراسية وتدريبات عملية حول العالم</p>
+            </div>
+            
+            {% if user.is_authenticated and user.profile.is_content_editor %}
+            <a href="{% url 'create_post' %}" class="mt-4 md:mt-0 inline-flex items-center bg-white text-orange-600 px-6 py-3 rounded-lg hover:bg-gray-100 font-bold transition duration-300 shadow-lg">
+                <i class="fas fa-plus-circle mr-2"></i> إضافة فرصة جديدة
+            </a>
+            {% endif %}
+        </div>
+        
+        <!-- إحصائيات سريعة -->
+        <div class="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white bg-opacity-20 p-4 rounded-lg backdrop-blur-sm hover:bg-opacity-30 transition duration-300">
+                <div class="text-2xl font-bold">{{ upcoming_deadlines|default:"0" }}</div>
+                <div class="opacity-90 text-sm">فرصة قريبة</div>
+            </div>
+            <div class="bg-white bg-opacity-20 p-4 rounded-lg backdrop-blur-sm hover:bg-opacity-30 transition duration-300">
+                <div class="text-2xl font-bold">{{ free_opportunities|default:"0" }}</div>
+                <div class="opacity-90 text-sm">تدريب مجاني</div>
+            </div>
+            <div class="bg-white bg-opacity-20 p-4 rounded-lg backdrop-blur-sm hover:bg-opacity-30 transition duration-300">
+                <div class="text-2xl font-bold">{{ fully_funded|default:"0" }}</div>
+                <div class="opacity-90 text-sm">منحة ممولة</div>
+            </div>
+            <div class="bg-white bg-opacity-20 p-4 rounded-lg backdrop-blur-sm hover:bg-opacity-30 transition duration-300">
+                <div class="text-2xl font-bold">{{ posts.paginator.count|default:"0" }}</div>
+                <div class="opacity-90 text-sm">فرصة متاحة</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- معلومات مهمة -->
+<section class="py-8 bg-orange-50 dark:bg-orange-900/20 border-b border-orange-200 dark:border-orange-800 transition-colors duration-300">
+    <div class="container mx-auto px-4">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-orange-100 dark:bg-orange-800/30 rounded-full flex items-center justify-center ml-4 shadow-sm">
+                    <i class="fas fa-exclamation-circle text-orange-600 dark:text-orange-400"></i>
+                </div>
+                <p class="text-orange-800 dark:text-orange-300 font-medium text-sm md:text-base">
+                    المواعيد النهائية للتقديم قريبة، لا تضيع الفرصة!
+                </p>
+            </div>
+            
+            <div class="flex items-center space-x-3 space-x-reverse">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-orange-600 dark:text-orange-400">{{ upcoming_deadlines|default:"0" }}</div>
+                    <div class="text-orange-700 dark:text-orange-300 text-sm">فرصة قريبة</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-orange-600 dark:text-orange-400">{{ free_opportunities|default:"0" }}</div>
+                    <div class="text-orange-700 dark:text-orange-300 text-sm">تدريب مجاني</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-orange-600 dark:text-orange-400">{{ fully_funded|default:"0" }}</div>
+                    <div class="text-orange-700 dark:text-orange-300 text-sm">منحة ممولة</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- البحث والتصفية -->
+<section class="py-8 bg-white dark:bg-gray-800 shadow-sm transition-colors duration-300">
+    <div class="container mx-auto px-4">
+        <div class="flex flex-col md:flex-row gap-6">
+            <!-- البحث -->
+            <div class="flex-grow">
+                <form method="get" action="{% url 'search' %}">
+                    <div class="relative">
+                        <input type="text" name="q" placeholder="ابحث عن منحة أو تدريب..." 
+                               class="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 transition duration-300 shadow-sm"
+                               value="{{ request.GET.q|default:'' }}">
+                        <div class="absolute right-3 top-3 text-gray-400 dark:text-gray-300">
+                            <i class="fas fa-search"></i>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- الفلاتر -->
+            <div class="flex flex-wrap gap-2">
+                <form method="get" class="flex flex-wrap gap-2">
+                    <!-- فلترة النوع -->
+                    <select name="type" onchange="this.form.submit()" 
+                            class="px-4 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white dark:bg-gray-700 shadow-sm transition duration-300">
+                        <option value="">نوع الفرصة</option>
+                        <option value="scholarship" {% if current_type == 'scholarship' %}selected{% endif %}>منحة دراسية</option>
+                        <option value="training" {% if current_type == 'training' %}selected{% endif %}>تدريب عملي</option>
+                        <option value="fellowship" {% if current_type == 'fellowship' %}selected{% endif %}>زمالة بحثية</option>
+                        <option value="conference" {% if current_type == 'conference' %}selected{% endif %}>مؤتمر دولي</option>
+                    </select>
+                    
+                    <!-- فلترة الترتيب -->
+                    <select name="sort" onchange="this.form.submit()"
+                            class="px-4 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white dark:bg-gray-700 shadow-sm transition duration-300">
+                        <option value="deadline" {% if current_sort == 'deadline' %}selected{% endif %}>الموعد النهائي</option>
+                        <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>الأحدث</option>
+                        <option value="funding" {% if current_sort == 'funding' %}selected{% endif %}>مستوى التمويل</option>
+                        <option value="popular" {% if current_sort == 'popular' %}selected{% endif %}>الأكثر مشاهدة</option>
+                    </select>
+                </form>
+            </div>
+        </div>
+        
+        <!-- التصنيفات السريعة -->
+        <div class="mt-6 flex flex-wrap gap-2">
+            <a href="?type=&sort=" 
+               class="{% if not current_type and not current_sort %}bg-orange-600 text-white{% else %}bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300{% endif %} px-4 py-2 rounded-full text-sm font-medium hover:bg-orange-200 dark:hover:bg-orange-800 transition duration-300 shadow-sm">
+                جميع الفرص
+            </a>
+            <a href="?type=scholarship&sort=deadline" 
+               class="{% if current_type == 'scholarship' and current_sort == 'deadline' %}bg-orange-600 text-white{% else %}bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300{% endif %} px-4 py-2 rounded-full text-sm font-medium hover:bg-orange-200 dark:hover:bg-orange-800 transition duration-300 shadow-sm">
+                منح دراسية
+            </a>
+            <a href="?type=training&sort=newest" 
+               class="{% if current_type == 'training' and current_sort == 'newest' %}bg-orange-600 text-white{% else %}bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300{% endif %} px-4 py-2 rounded-full text-sm font-medium hover:bg-orange-200 dark:hover:bg-orange-800 transition duration-300 shadow-sm">
+                تدريبات عملية
+            </a>
+            <a href="?type=fellowship&sort=" 
+               class="{% if current_type == 'fellowship' %}bg-orange-600 text-white{% else %}bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300{% endif %} px-4 py-2 rounded-full text-sm font-medium hover:bg-orange-200 dark:hover:bg-orange-800 transition duration-300 shadow-sm">
+                زمالات بحثية
+            </a>
+            <a href="?type=conference&sort=" 
+               class="{% if current_type == 'conference' %}bg-orange-600 text-white{% else %}bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300{% endif %} px-4 py-2 rounded-full text-sm font-medium hover:bg-orange-200 dark:hover:bg-orange-800 transition duration-300 shadow-sm">
+                مؤتمرات دولية
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- قائمة المنح والتدريبات -->
+<section class="py-12 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div class="container mx-auto px-4">
+        <!-- المنح المميزة -->
+        {% if featured_grants %}
+        <div class="mb-12">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center">
+                    <i class="fas fa-crown text-yellow-500 mr-2"></i> فرص مميزة
+                </h2>
+                <span class="text-sm text-gray-500 dark:text-gray-400 bg-yellow-100 dark:bg-yellow-900/30 px-3 py-1 rounded-full">
+                    الأكثر طلباً
+                </span>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {% for post in featured_grants %}
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition duration-300 border-2 border-yellow-300 dark:border-yellow-600 grant-card-featured">
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-xs font-bold px-3 py-1.5 rounded-full">
+                                    {{ post.category.name }}
+                                </span>
+                                <span class="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-xs font-bold px-3 py-1.5 rounded-full">
+                                    <i class="fas fa-clock ml-1"></i> {{ post.publish_date|date:"Y/m/d" }}
+                                </span>
+                            </div>
+                            <span class="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-bold px-3 py-1.5 rounded-full">
+                                <i class="fas fa-check-circle ml-1"></i> ممولة بالكامل
+                            </span>
+                        </div>
+                        
+                        <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-3 leading-tight line-clamp-2">
+                            <a href="{% url 'post_detail' post.slug %}" class="hover:text-orange-600 dark:hover:text-orange-400 transition duration-300">
+                                {{ post.title }}
+                            </a>
+                        </h3>
+                        
+                        <p class="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-3 leading-relaxed">
+                            {{ post.excerpt|default:post.content|striptags|truncatechars:150 }}
+                        </p>
+                        
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div class="flex items-center text-gray-500 dark:text-gray-400 text-sm flex-wrap gap-3">
+                                <div class="flex items-center">
+                                    <i class="fas fa-globe ml-2 text-orange-500 dark:text-orange-400"></i>
+                                    <span>دولي</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <i class="fas fa-graduation-cap mr-2 text-orange-500 dark:text-orange-400"></i>
+                                    <span>
+                                        {% if "بكالوريوس" in post.title or "Bachelor" in post.seo_keywords %}
+                                        بكالوريوس
+                                        {% elif "ماجستير" in post.title or "Master" in post.seo_keywords %}
+                                        ماجستير
+                                        {% elif "دكتوراه" in post.title or "PhD" in post.seo_keywords %}
+                                        دكتوراه
+                                        {% else %}
+                                        جميع المستويات
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <a href="{% url 'post_detail' post.slug %}" 
+                               class="bg-gradient-to-r from-yellow-500 to-orange-600 text-white px-5 py-2.5 rounded-lg hover:opacity-90 font-medium transition duration-300 shadow-sm hover:shadow whitespace-nowrap">
+                                التقديم الآن <i class="fas fa-arrow-left mr-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- جميع الفرص -->
+        <div>
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center">
+                    <i class="fas fa-list mr-2 text-orange-500 dark:text-orange-400"></i> جميع الفرص المتاحة
+                    <span class="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full mr-3">
+                        {{ posts.paginator.count|default:0 }} فرصة
+                    </span>
+                </h2>
+                
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <span class="text-gray-600 dark:text-gray-400 text-sm">ترتيب حسب:</span>
+                    <select onchange="window.location.href = window.location.pathname + '?type={{ current_type }}&sort=' + this.value"
+                            class="px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white dark:bg-gray-700 text-sm shadow-sm">
+                        <option value="deadline" {% if current_sort == 'deadline' %}selected{% endif %}>الموعد النهائي</option>
+                        <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>الأحدث</option>
+                        <option value="funding" {% if current_sort == 'funding' %}selected{% endif %}>مستوى التمويل</option>
+                        <option value="popular" {% if current_sort == 'popular' %}selected{% endif %}>الأكثر مشاهدة</option>
+                    </select>
+                </div>
+            </div>
+            
+            {% if posts %}
+            <!-- إحصائيات البحث -->
+            <div class="mb-6 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg transition-colors duration-300">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <div class="text-gray-700 dark:text-gray-300">
+                        <span class="font-medium">النتائج:</span> 
+                        <span class="text-orange-600 dark:text-orange-400">{{ posts.paginator.count }}</span> 
+                        فرصة متاحة
+                    </div>
+                    <div class="flex items-center space-x-4 mt-2 md:mt-0 text-sm text-gray-600 dark:text-gray-400">
+                        <div>
+                            <i class="fas fa-bolt ml-1 text-orange-500 dark:text-orange-400"></i>
+                            فرص عاجلة: 
+                            <span class="font-bold">{{ urgent_count|default:"0" }}</span>
+                        </div>
+                        <div>
+                            <i class="fas fa-check-circle ml-1 text-green-500 dark:text-green-400"></i>
+                            ممولة بالكامل: 
+                            <span class="font-bold">{{ fully_funded|default:"0" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="space-y-6">
+                {% for post in posts %}
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700 hover:border-orange-200 dark:hover:border-orange-700 grant-card">
+                    <div class="md:flex justify-between items-start gap-6">
+                        <div class="md:w-3/4">
+                            <div class="flex flex-wrap gap-2 mb-3">
+                                <span class="bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 text-xs font-bold px-3 py-1.5 rounded-full">
+                                    {{ post.category.name }}
+                                </span>
+                                
+                                {% if "ممولة" in post.title or "funded" in post.seo_keywords|lower %}
+                                <span class="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-bold px-3 py-1.5 rounded-full">
+                                    <i class="fas fa-check-circle ml-1"></i> ممولة بالكامل
+                                </span>
+                                {% endif %}
+                                
+                                {% if "عاجل" in post.title or "urgent" in post.seo_keywords|lower or post.publish_date|timeuntil < "7 days" %}
+                                <span class="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-xs font-bold px-3 py-1.5 rounded-full">
+                                    <i class="fas fa-bolt ml-1"></i> عاجل
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-2 leading-tight">
+                                <a href="{% url 'post_detail' post.slug %}" class="hover:text-orange-600 dark:hover:text-orange-400 transition duration-300">
+                                    {{ post.title }}
+                                </a>
+                            </h3>
+                            
+                            <p class="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2 leading-relaxed">
+                                {{ post.excerpt|default:post.content|striptags|truncatechars:200 }}
+                            </p>
+                            
+                            <div class="flex flex-wrap gap-4 text-gray-500 dark:text-gray-400 text-sm">
+                                <div class="flex items-center">
+                                    <i class="fas fa-globe ml-2 text-orange-500 dark:text-orange-400"></i>
+                                    <span class="mr-1">البلد:</span>
+                                    <span>
+                                        {% if "دولي" in post.title or "international" in post.seo_keywords|lower %}
+                                        دولي
+                                        {% else %}
+                                        {{ post.category.name|slice:":10" }}
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <div class="flex items-center">
+                                    <i class="fas fa-clock ml-2 text-orange-500 dark:text-orange-400"></i>
+                                    <span class="mr-1">الموعد:</span>
+                                    <span>{{ post.publish_date|date:"Y/m/d" }}</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <i class="fas fa-user-graduate ml-2 text-orange-500 dark:text-orange-400"></i>
+                                    <span class="mr-1">المستوى:</span>
+                                    <span>
+                                        {% if "بكالوريوس" in post.title %}
+                                        بكالوريوس
+                                        {% elif "ماجستير" in post.title %}
+                                        ماجستير
+                                        {% elif "دكتوراه" in post.title %}
+                                        دكتوراه
+                                        {% else %}
+                                        جميع المستويات
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="md:w-1/4 mt-4 md:mt-0 md:text-right">
+                            <div class="mb-4">
+                                <div class="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                                    {{ post.views|default:"0" }}
+                                </div>
+                                <div class="text-gray-500 dark:text-gray-400 text-sm">مشاهدة</div>
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <a href="{% url 'post_detail' post.slug %}" 
+                                   class="block w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2.5 rounded-lg hover:opacity-90 font-medium transition duration-300 shadow-sm hover:shadow text-center">
+                                    تفاصيل الفرصة
+                                </a>
+                                {% if post.link %}
+                                <button onclick="showApplicationLink('{{ post.id }}', {{ post.link_delay|default:30 }})" 
+                                        class="w-full bg-white dark:bg-gray-700 border border-orange-600 dark:border-orange-500 text-orange-600 dark:text-orange-400 px-4 py-2.5 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 font-medium transition duration-300 shadow-sm hover:shadow text-center text-sm">
+                                    <i class="fas fa-external-link-alt mr-1"></i> التقديم
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- الترقيم -->
+            {% if posts.has_other_pages %}
+            <div class="mt-12">
+                <nav class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                    <div class="text-gray-600 dark:text-gray-400 text-sm">
+                        عرض {{ posts.start_index }} إلى {{ posts.end_index }} من أصل {{ posts.paginator.count }} فرصة
+                    </div>
+                    
+                    <div class="flex items-center space-x-2 space-x-reverse">
+                        {% if posts.has_previous %}
+                        <a href="?page={{ posts.previous_page_number }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}" 
+                           class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-600 transition duration-300 shadow-sm">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                        {% endif %}
+                        
+                        {% for num in posts.paginator.page_range %}
+                            {% if posts.number == num %}
+                            <span class="px-3 py-2 bg-orange-600 text-white rounded-lg font-medium shadow-sm">{{ num }}</span>
+                            {% elif num > posts.number|add:'-3' and num < posts.number|add:'3' %}
+                            <a href="?page={{ num }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}" 
+                               class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-600 transition duration-300 shadow-sm">
+                                {{ num }}
+                            </a>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if posts.has_next %}
+                        <a href="?page={{ posts.next_page_number }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}" 
+                           class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-600 transition duration-300 shadow-sm">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </nav>
+            </div>
+            {% endif %}
+            
+            {% else %}
+            <!-- حالة عدم وجود فرص -->
+            <div class="text-center py-16">
+                <div class="w-24 h-24 bg-gradient-to-r from-orange-100 to-orange-200 dark:from-orange-900/30 dark:to-orange-800/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-award text-orange-500 dark:text-orange-400 text-3xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-700 dark:text-gray-300 mb-3">لا توجد فرص حالياً</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                    {% if current_type %}
+                    لا توجد فرص من نوع "{{ current_type }}" حالياً. يمكنك تصفح أنواع الفرص الأخرى.
+                    {% else %}
+                    لم يتم نشر أي فرص في هذا القسم بعد. يمكنك تصفح الأقسام الأخرى أو العودة لاحقاً.
+                    {% endif %}
+                </p>
+                
+                <div class="flex flex-col sm:flex-row justify-center gap-4">
+                    <button onclick="subscribeToNotifications()" 
+                            class="inline-flex items-center justify-center bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-medium transition duration-300 shadow-lg">
+                        <i class="fas fa-bell mr-2"></i> إشعارني بفرص جديدة
+                    </button>
+                    <a href="{% url 'courses' %}" 
+                       class="inline-flex items-center justify-center bg-white dark:bg-gray-800 border border-orange-600 dark:border-orange-500 text-orange-600 dark:text-orange-400 px-6 py-3 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 font-medium transition duration-300 shadow-sm">
+                        <i class="fas fa-video mr-2"></i> تصفح الكورسات
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- نصائح للتقديم -->
+<section class="py-12 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div class="container mx-auto px-4">
+        <h2 class="text-2xl font-bold text-center text-gray-800 dark:text-white mb-8">نصائح للتقديم الناجح</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md hover:shadow-lg transition duration-300 transform hover:-translate-y-1">
+                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
+                    <i class="fas fa-file-alt text-blue-600 dark:text-blue-400 text-xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-3">إعداد المستندات</h3>
+                <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                    جهز سيرة ذاتية حديثة، خطابات توصية، وشهاداتك الأكاديمية قبل التقديم بوقت كافٍ.
+                </p>
+            </div>
+            
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md hover:shadow-lg transition duration-300 transform hover:-translate-y-1">
+                <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
+                    <i class="fas fa-clock text-green-600 dark:text-green-400 text-xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-3">المواعيد النهائية</h3>
+                <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                    لا تنتظر حتى آخر لحظة، قدم طلباتك قبل الموعد النهائي بوقت كافٍ لتجنب أي مشاكل.
+                </p>
+            </div>
+            
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md hover:shadow-lg transition duration-300 transform hover:-translate-y-1">
+                <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mb-4">
+                    <i class="fas fa-edit text-purple-600 dark:text-purple-400 text-xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-3">رسالة الدافع</h3>
+                <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                    اكتب رسالة دافع قوية تبرز فيها إنجازاتك وأهدافك المستقبلية بشكل واضح ومختصر.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- أنواع المنح -->
+<section class="py-12 bg-white dark:bg-gray-800 transition-colors duration-300">
+    <div class="container mx-auto px-4">
+        <h2 class="text-2xl font-bold text-center text-gray-800 dark:text-white mb-8">أنواع الفرص المتاحة</h2>
+        
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/30 p-6 rounded-xl text-center border border-orange-200 dark:border-orange-700">
+                <div class="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-graduation-cap text-white text-xl"></i>
+                </div>
+                <div class="font-bold text-orange-800 dark:text-orange-300 text-sm mb-1">منح دراسية</div>
+                <div class="text-orange-600 dark:text-orange-400 text-xs">تمويل كامل أو جزئي للدراسة</div>
+            </div>
+            
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/30 p-6 rounded-xl text-center border border-blue-200 dark:border-blue-700">
+                <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-briefcase text-white text-xl"></i>
+                </div>
+                <div class="font-bold text-blue-800 dark:text-blue-300 text-sm mb-1">تدريبات عملية</div>
+                <div class="text-blue-600 dark:text-blue-400 text-xs">فرص اكتساب خبرة عملية</div>
+            </div>
+            
+            <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/30 p-6 rounded-xl text-center border border-green-200 dark:border-green-700">
+                <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-user-tie text-white text-xl"></i>
+                </div>
+                <div class="font-bold text-green-800 dark:text-green-300 text-sm mb-1">زمالات بحثية</div>
+                <div class="text-green-600 dark:text-green-400 text-xs">فرص بحث وتطوير أكاديمي</div>
+            </div>
+            
+            <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/30 p-6 rounded-xl text-center border border-purple-200 dark:border-purple-700">
+                <div class="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-users text-white text-xl"></i>
+                </div>
+                <div class="font-bold text-purple-800 dark:text-purple-300 text-sm mb-1">مؤتمرات دولية</div>
+                <div class="text-purple-600 dark:text-purple-400 text-xs">مشاركة في فعاليات عالمية</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+// دالة لعرض رابط التقديم بعد العد التنازلي
+function showApplicationLink(postId, delay) {
+    const button = event.target.closest('button');
+    if (!button) return;
+    
+    const originalHTML = button.innerHTML;
+    const originalClass = button.className;
+    
+    button.disabled = true;
+    button.innerHTML = `<i class="fas fa-clock mr-2"></i> ${delay}`;
+    button.className = originalClass.replace('bg-white', 'bg-gray-100').replace('text-orange-600', 'text-gray-500');
+    
+    let countdown = delay;
+    const interval = setInterval(() => {
+        countdown--;
+        button.innerHTML = `<i class="fas fa-clock mr-2"></i> ${countdown}`;
+        
+        if (countdown <= 0) {
+            clearInterval(interval);
+            button.innerHTML = '<i class="fas fa-external-link-alt mr-2"></i> التقديم الآن';
+            button.disabled = false;
+            button.className = originalClass.replace('bg-white', 'bg-green-500').replace('text-orange-600', 'text-white').replace('border-orange-600', 'border-green-500');
+            
+            // حفظ الرابط الجديد
+            const applicationLink = button.getAttribute('data-application-url') || `/apply/${postId}/`;
+            
+            button.onclick = function() {
+                window.open(applicationLink, '_blank');
+                // إعادة الزر إلى حالته الأصلية
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.className = originalClass;
+                    button.onclick = function() {
+                        showApplicationLink(postId, delay);
+                    };
+                }, 3000);
+            };
+        }
+    }, 1000);
+}
+
+// الاشتراك في الإشعارات
+function subscribeToNotifications() {
+    const notification = new Notification("كنوز - المنح والتدريبات", {
+        body: "سيتم إعلامك عند إضافة فرص جديدة",
+        icon: "/static/images/logo.png"
+    });
+    
+    // طلب إذن الإشعارات إذا لم يكن مسموحاً
+    if (Notification.permission === "default") {
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                alert("تم تفعيل الإشعارات! سيتم إعلامك بآخر الفرص.");
+            }
+        });
+    } else if (Notification.permission === "granted") {
+        alert("أنت مشترك بالفعل في الإشعارات!");
+    } else {
+        alert("يرجى السماح بالإشعارات من إعدادات المتصفح.");
+    }
+}
+
+// تأثيرات الكروت
+document.addEventListener('DOMContentLoaded', function() {
+    // تحديث روابط الترقيم مع المعاملات
+    document.querySelectorAll('a[href*="?page="]').forEach(link => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const href = link.getAttribute('href');
+        const baseUrl = href.split('?')[0];
+        const params = new URLSearchParams(href.split('?')[1] || '');
+        
+        // إضافة معاملات التصفية الحالية
+        ['type', 'sort'].forEach(param => {
+            if (urlParams.has(param) && !params.has(param)) {
+                params.append(param, urlParams.get(param));
+            }
+        });
+        
+        link.setAttribute('href', baseUrl + '?' + params.toString());
+    });
+    
+    // تأثيرات الكروت
+    document.querySelectorAll('.grant-card, .grant-card-featured').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+        });
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+    
+    // تحديث عدادات الفرص العاجلة
+    updateUrgentCount();
+});
+
+function updateUrgentCount() {
+    const urgentElements = document.querySelectorAll('.grant-card:has(.bg-red-100)');
+    if (document.getElementById('urgentCount')) {
+        document.getElementById('urgentCount').textContent = urgentElements.length;
+    }
+}
+</script>
+
+<style>
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* تأثيرات الكروت */
+.grant-card {
+    transition: all 0.3s ease;
+}
+
+.grant-card:hover {
+    box-shadow: 0 10px 25px -5px rgba(249, 115, 22, 0.1), 0 10px 10px -5px rgba(249, 115, 22, 0.04);
+}
+
+.grant-card-featured {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+    }
+}
+
+/* أنيميشن التأثيرات */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.grant-card {
+    animation: slideIn 0.5s ease-out;
+}
+
+/* تأخير أنيميشن الكروت */
+.grant-card:nth-child(2) { animation-delay: 0.1s; }
+.grant-card:nth-child(3) { animation-delay: 0.2s; }
+.grant-card:nth-child(4) { animation-delay: 0.3s; }
+.grant-card:nth-child(5) { animation-delay: 0.4s; }
+.grant-card:nth-child(6) { animation-delay: 0.5s; }
+</style>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block title %}إنشاء حساب - كنوز{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 transition-colors duration-300">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <div class="flex justify-center">
+                <div class="w-16 h-16 bg-gradient-to-r from-green-500 to-teal-600 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user-plus text-white text-2xl"></i>
+                </div>
+            </div>
+            <h2 class="mt-6 text-center text-3xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">
+                إنشاء حساب جديد
+            </h2>
+            <p class="mt-2 text-center text-gray-600 dark:text-gray-300 transition-colors duration-300">
+                أو 
+                <a href="{% url 'login' %}" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors duration-300">
+                    تسجيل الدخول
+                </a>
+            </p>
+        </div>
+        
+        <form class="mt-8 space-y-6" method="post">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+            <div class="bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded transition-colors duration-300">
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <p><strong>{{ field.label }}:</strong> {{ error }}</p>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <div class="rounded-md shadow-sm space-y-4">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">اسم المستخدم</label>
+                    <input id="username" name="username" type="text" required 
+                           value="{{ form.username.value|default:'' }}"
+                           class="appearance-none relative block w-full px-3 py-3 border border-gray-300 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-colors duration-300 dark-mode-transition"
+                           placeholder="اختر اسم مستخدم فريد">
+                    {% if form.username.help_text %}
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">{{ form.username.help_text }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="first_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">الاسم الأول</label>
+                        <input id="first_name" name="first_name" type="text"
+                               value="{{ form.first_name.value|default:'' }}"
+                               class="appearance-none relative block w-full px-3 py-3 border border-gray-300 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-colors duration-300 dark-mode-transition"
+                               placeholder="الاسم الأول">
+                    </div>
+                    
+                    <div>
+                        <label for="last_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">اسم العائلة</label>
+                        <input id="last_name" name="last_name" type="text"
+                               value="{{ form.last_name.value|default:'' }}"
+                               class="appearance-none relative block w-full px-3 py-3 border border-gray-300 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-colors duration-300 dark-mode-transition"
+                               placeholder="اسم العائلة">
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">البريد الإلكتروني</label>
+                    <input id="email" name="email" type="email" required
+                           value="{{ form.email.value|default:'' }}"
+                           class="appearance-none relative block w-full px-3 py-3 border border-gray-300 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-colors duration-300 dark-mode-transition"
+                           placeholder="example@email.com">
+                </div>
+                
+                <div>
+                    <label for="password1" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">كلمة المرور</label>
+                    <input id="password1" name="password1" type="password" required 
+                           class="appearance-none relative block w-full px-3 py-3 border border-gray-300 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-colors duration-300 dark-mode-transition"
+                           placeholder="كلمة المرور">
+                    {% if form.password1.help_text %}
+                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
+                        {{ form.password1.help_text|safe }}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="password2" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">تأكيد كلمة المرور</label>
+                    <input id="password2" name="password2" type="password" required 
+                           class="appearance-none relative block w-full px-3 py-3 border border-gray-300 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-colors duration-300 dark-mode-transition"
+                           placeholder="أعد إدخال كلمة المرور">
+                </div>
+            </div>
+
+            <div class="flex items-center">
+                <input id="terms" name="terms" type="checkbox" required
+                       class="h-4 w-4 text-blue-600 dark:text-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 border-gray-300 dark:border-gray-700 rounded transition-colors duration-300">
+                <label for="terms" class="mr-2 block text-sm text-gray-900 dark:text-gray-300 transition-colors duration-300">
+                    أوافق على 
+                    <a href="#" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors duration-300">الشروط والأحكام</a>
+                    و
+                    <a href="#" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors duration-300">سياسة الخصوصية</a>
+                </label>
+            </div>
+
+            <div>
+                <button type="submit" 
+                        class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-green-500 to-teal-600 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-green-400 transition duration-300">
+                    <span class="absolute right-0 inset-y-0 flex items-center pr-3">
+                        <i class="fas fa-user-check"></i>
+                    </span>
+                    إنشاء حساب
+                </button>
+            </div>
+        </form>
+        
+        <div class="text-center pt-6 border-t border-gray-200 dark:border-gray-700 transition-colors duration-300">
+            <p class="text-gray-600 dark:text-gray-300 transition-colors duration-300">بإنشاء حساب، فإنك توافق على:</p>
+            <div class="mt-2 space-y-1">
+                <p class="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">• تلقي عروض وتحديثات عبر البريد الإلكتروني</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">• الشروط والأحكام وسياسة الخصوصية</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">• سياسة استخدام ملفات تعريف الارتباط</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

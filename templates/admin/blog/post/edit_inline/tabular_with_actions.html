@@ -1,0 +1,77 @@
+{% load i18n admin_urls static %}
+<div class="inline-group" id="{{ inline_admin_formset.formset.prefix }}-group">
+    <h2>{{ inline_admin_formset.opts.verbose_name_plural|capfirst }}</h2>
+    {{ inline_admin_formset.formset.management_form }}
+    {{ inline_admin_formset.formset.non_form_errors }}
+    
+    <div class="items">
+        {% for inline_admin_form in inline_admin_formset %}
+        <div class="inline-related{% if inline_admin_form.original or inline_admin_form.show_url %} has_original{% endif %}{% if forloop.last %} empty-form last-related{% endif %}" 
+             id="{{ inline_admin_formset.formset.prefix }}-{% if not forloop.last %}{{ forloop.counter0 }}{% else %}empty{% endif %}">
+            
+            {% if inline_admin_form.form.non_field_errors %}
+            <div class="errornote">{{ inline_admin_form.form.non_field_errors }}</div>
+            {% endif %}
+            
+            <fieldset class="module aligned {{ inline_admin_formset.classes }}">
+                {% if inline_admin_form.show_url %}
+                <p><a href="{{ inline_admin_form.absolute_url }}">{% trans "View on site" %}</a></p>
+                {% endif %}
+                
+                {% for fieldset in inline_admin_form %}
+                    {% for line in fieldset %}
+                        {% for field in line %}
+                            {% if field.is_readonly %}
+                                <div class="form-row{% if line.errors %} errors{% endif %} field-{{ field.field.name }}">
+                                    {% if line.errors %}
+                                    <div class="errors">
+                                        {% for error in line.errors %}
+                                        <div class="error">{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div{% if not line.fields|length_is:"1" %} class="field-box"{% endif %}>
+                                        {% if field.is_checkbox %}
+                                            {{ field.field }}{{ field.label_tag }}
+                                        {% else %}
+                                            {{ field.label_tag }}
+                                            <div class="readonly">{{ field.contents }}</div>
+                                        {% endif %}
+                                        
+                                        {% if field.field.help_text %}
+                                        <div class="help">{{ field.field.help_text|safe }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="form-row{% if line.errors %} errors{% endif %} field-{{ field.field.name }}">
+                                    {% if line.errors %}
+                                    <div class="errors">
+                                        {% for error in line.errors %}
+                                        <div class="error">{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div{% if not line.fields|length_is:"1" %} class="field-box"{% endif %}>
+                                        {{ field.label_tag }}
+                                        {{ field.field }}
+                                        
+                                        {% if field.field.help_text %}
+                                        <div class="help">{{ field.field.help_text|safe }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                {% endfor %}
+                
+                {{ inline_admin_form.pk_field.field }}
+                {{ inline_admin_form.fk_field.field }}
+            </fieldset>
+        </div>
+        {% endfor %}
+    </div>
+</div>
