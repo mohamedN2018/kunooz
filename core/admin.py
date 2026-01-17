@@ -199,6 +199,9 @@ class PostAdmin(admin.ModelAdmin):
     duplicate_post.short_description = _('نسخ المنشورات المحددة')
 
 
+
+
+
 class PostBlockAdminForm(forms.ModelForm):
     class Meta:
         model = PostBlock
@@ -206,7 +209,6 @@ class PostBlockAdminForm(forms.ModelForm):
         widgets = {
             'text': forms.Textarea(attrs={'rows': 10, 'style': 'width: 100%;'}),
         }
-
 
 @admin.register(PostBlock)
 class PostBlockAdmin(admin.ModelAdmin):
@@ -262,6 +264,8 @@ class PostBlockAdmin(admin.ModelAdmin):
             obj.text = None
         
         super().save_model(request, obj, form, change)
+
+
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):

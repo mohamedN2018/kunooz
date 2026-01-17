@@ -18,11 +18,18 @@ DEBUG = True
 
 MAIN_DOMAIN = config("MAIN_DOMAIN", default="kunooz.deplois.net").replace("https://", "").replace("http://", "")
 
+# ALLOWED_HOSTS = [
+#     MAIN_DOMAIN,
+#     f"www.{MAIN_DOMAIN}",
+# ]
 ALLOWED_HOSTS = [
     MAIN_DOMAIN,
     f"www.{MAIN_DOMAIN}",
-]
 
+    # Local development
+    "127.0.0.1",
+    "localhost",
+]
 
 CSRF_TRUSTED_ORIGINS = [
     f"{MAIN_DOMAIN}",
@@ -32,7 +39,7 @@ CSRF_TRUSTED_ORIGINS = [
     f"https://{MAIN_DOMAIN}",
     f"https://www.{MAIN_DOMAIN}",
 ]
-    
+
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True
 
@@ -51,6 +58,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # التطبيقات المضافة
+    'adminsortable2',
     'crispy_forms',
     'ckeditor',
     

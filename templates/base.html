@@ -380,29 +380,6 @@
                 transform: translateX(0);
             }
 
-            /* System Badge */
-            .system-badge {
-                position: fixed;
-                bottom: 9rem;
-                right: 1.5rem;
-                background: #e5e7eb;
-                color: #374151;
-                padding: 0.5rem 1rem;
-                border-radius: 20px;
-                font-size: 0.8rem;
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                z-index: 998;
-                border: 1px solid #d1d5db;
-                transition: all 0.3s ease;
-            }
-
-            .dark .system-badge {
-                background: #1e293b;
-                color: #cbd5e1;
-                border-color: #475569;
-            }
 
             /* Custom Scrollbar */
             .dark ::-webkit-scrollbar {
@@ -443,12 +420,7 @@
                     bottom: 5rem;
                 }
                 
-                .system-badge {
-                    bottom: 5rem;
-                    right: 1rem;
-                    font-size: 0.7rem;
-                    padding: 0.4rem 0.8rem;
-                }
+
             }
 
             @media (max-width: 480px) {
@@ -472,14 +444,6 @@
                 transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
             }
 
-            /* Print Styles */
-            @media print {
-                .dark-mode-toggle,
-                .back-to-top,
-                .system-badge {
-                    display: none !important;
-                }
-            }
 
             /* Footer Responsive Styles */
             @media (max-width: 768px) {
@@ -667,11 +631,6 @@
         <span class="tooltip">العودة للأعلى</span>
     </button>
 
-    <!-- System Badge -->
-    <div class="system-badge" id="systemBadge">
-        <i class="fas fa-desktop"></i>
-        <span id="modeIndicator">النظام</span>
-    </div>
 
     <!-- Mobile Menu Overlay -->
     <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>

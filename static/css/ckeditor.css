@@ -1,0 +1,75 @@
+/* تنسيقات CKEditor مع دعم Dark Mode */
+.cke_reset_all,
+.cke_reset_all *,
+.cke_reset_all a,
+.cke_reset_all textarea {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+.cke_editable {
+    font-size: 16px !important;
+    line-height: 1.8 !important;
+    color: #374151 !important;
+    padding: 1rem !important;
+}
+
+.dark .cke_editable {
+    color: #f9fafb !important;
+    background: #374151 !important;
+}
+
+.cke_top {
+    background: #f9fafb !important;
+    border-bottom: 1px solid #e5e7eb !important;
+}
+
+.dark .cke_top {
+    background: #374151 !important;
+    border-bottom-color: #4b5563 !important;
+}
+
+.cke_bottom {
+    background: #f9fafb !important;
+    border-top: 1px solid #e5e7eb !important;
+}
+
+.dark .cke_bottom {
+    background: #374151 !important;
+    border-top-color: #4b5563 !important;
+}
+
+.cke_toolbar {
+    background: transparent !important;
+}
+
+.cke_button {
+    border-radius: 4px !important;
+    transition: all 0.2s ease !important;
+}
+
+.cke_button:hover {
+    background: rgba(59, 130, 246, 0.1) !important;
+}
+
+.dark .cke_button:hover {
+    background: rgba(59, 130, 246, 0.2) !important;
+}
+
+.cke_button_on {
+    background: rgba(59, 130, 246, 0.2) !important;
+}
+
+.dark .cke_button_on {
+    background: rgba(59, 130, 246, 0.3) !important;
+}
+
+.cke_combo_button {
+    border: 1px solid #d1d5db !important;
+    border-radius: 4px !important;
+}
+
+.dark .cke_combo_button {
+    border-color: #4b5563 !important;
+    background: #374151 !important;
+    color: #f9fafb !important;
+}
