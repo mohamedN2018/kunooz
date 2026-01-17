@@ -33,8 +33,6 @@ urlpatterns = [
     path('password-reset-confirm/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
         template_name='auth/password_reset_confirm.html'), name='password_reset_confirm'),
     path('reset/<uidb64>/<token>/', views.password_reset_confirm, name='password_reset_confirm'),
-    path('password-reset-complete/', auth_views.PasswordResetCompleteView.as_view(
-        template_name='auth/password_reset_complete.html'), name='password_reset_complete'),
     
     # AJAX/API endpoints
     path('check-username/', views.check_username, name='check_username'),
@@ -55,18 +53,18 @@ urlpatterns = [
     path('staff/dashboard/', views.staff_dashboard, name='staff_dashboard'),
     path('staff/posts/', views.staff_manage_posts, name='staff_manage_posts'),
     
-    # لوحة تحكم Admin
-    path('admin/dashboard/', views.admin_dashboard, name='admin_dashboard'),
-    path('admin/settings/', views.admin_settings, name='admin_settings'),
-    path('admin/users/', views.manage_users, name='manage_users'),
-    path('admin/logs/', views.system_logs, name='system_logs'),
-    
-    # إدارة التعليقات (Admin)
-    path('admin/comments/', views.manage_comments, name='manage_comments'),
-    path('admin/comments/approve/<int:comment_id>/', views.approve_comment, name='approve_comment'),
-    path('admin/comments/reject/<int:comment_id>/', views.reject_comment, name='reject_comment'),
-    path('admin/comments/bulk-approve/', views.bulk_approve_comments, name='bulk_approve_comments'),
-    path('admin/comments/bulk-delete/', views.bulk_delete_comments, name='bulk_delete_comments'),
+    # لوحة تحكم الإدارة الخاصة (بديل admin/)
+    path('control/dashboard/', views.admin_dashboard, name='control_dashboard'),
+    path('control/settings/', views.admin_settings, name='control_settings'),
+    path('control/users/', views.manage_users, name='control_users'),
+    path('control/logs/', views.system_logs, name='control_logs'),
+
+    # إدارة التعليقات الخاصة بلوحة التحكم
+    path('control/comments/', views.manage_comments, name='control_comments'),
+    path('control/comments/approve/<int:comment_id>/', views.approve_comment, name='control_comment_approve'),
+    path('control/comments/reject/<int:comment_id>/', views.reject_comment, name='control_comment_reject'),
+    path('control/comments/bulk-approve/', views.bulk_approve_comments, name='control_comments_bulk_approve'),
+    path('control/comments/bulk-delete/', views.bulk_delete_comments, name='control_comments_bulk_delete'),
 ]
 
 # معالجات الأخطاء

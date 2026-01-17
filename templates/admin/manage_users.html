@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-7xl mx-auto px-4 py-6">
+
+    <!-- العنوان -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">
+            {{ title }}
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+            إدارة حسابات المستخدمين والصلاحيات
+        </p>
+    </div>
+
+    <!-- إحصائيات -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <p class="text-sm text-gray-500 dark:text-gray-400">إجمالي المستخدمين</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ total_users }}</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Staff</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ staff_users }}</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Super Admin</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ superusers }}</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <p class="text-sm text-gray-500 dark:text-gray-400">محرري المحتوى</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ content_editors }}</p>
+        </div>
+
+    </div>
+
+    <!-- جدول المستخدمين -->
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm text-right">
+                <thead class="bg-gray-100 dark:bg-gray-800">
+                    <tr>
+                        <th class="px-4 py-3 text-gray-600 dark:text-gray-300">المستخدم</th>
+                        <th class="px-4 py-3 text-gray-600 dark:text-gray-300">البريد الإلكتروني</th>
+                        <th class="px-4 py-3 text-center text-gray-600 dark:text-gray-300">Staff</th>
+                        <th class="px-4 py-3 text-center text-gray-600 dark:text-gray-300">Admin</th>
+                        <th class="px-4 py-3 text-center text-gray-600 dark:text-gray-300">محرر</th>
+                        <th class="px-4 py-3 text-gray-600 dark:text-gray-300">تاريخ التسجيل</th>
+                        <th class="px-4 py-3 text-center text-gray-600 dark:text-gray-300">إجراءات</th>
+                    </tr>
+                </thead>
+
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for user in users %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+
+                        <td class="px-4 py-3 text-gray-800 dark:text-gray-100">
+                            {{ user.username }}
+                        </td>
+
+                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
+                            {{ user.email|default:"—" }}
+                        </td>
+
+                        <td class="px-4 py-3 text-center">
+                            {% if user.is_staff %}
+                                <span class="text-green-600">✔</span>
+                            {% else %}
+                                <span class="text-gray-400">—</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="px-4 py-3 text-center">
+                            {% if user.is_superuser %}
+                                <span class="text-green-600">✔</span>
+                            {% else %}
+                                <span class="text-gray-400">—</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="px-4 py-3 text-center">
+                            {% if user.profile.is_content_editor %}
+                                <span class="text-green-600">✔</span>
+                            {% else %}
+                                <span class="text-gray-400">—</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
+                            {{ user.date_joined|date:"Y-m-d" }}
+                        </td>
+
+                        <td class="px-4 py-3 text-center space-x-2">
+                            <a href="/admin/auth/user/{{ user.id }}/change/"
+                               class="text-blue-600 hover:underline dark:text-blue-400">
+                                تعديل
+                            </a>
+
+                            {% if not user.is_superuser %}
+                                <span class="text-gray-400">|</span>
+                                <a href="/admin/auth/user/{{ user.id }}/delete/"
+                                   class="text-red-600 hover:underline dark:text-red-400">
+                                    حذف
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7"
+                            class="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
+                            لا يوجد مستخدمين
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if users.has_other_pages %}
+    <div class="flex justify-center items-center mt-6 gap-2">
+        {% if users.has_previous %}
+            <a href="?page={{ users.previous_page_number }}"
+               class="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700
+                      text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600">
+                السابق
+            </a>
+        {% endif %}
+
+        <span class="px-4 py-1 rounded bg-blue-600 text-white">
+            {{ users.number }}
+        </span>
+
+        {% if users.has_next %}
+            <a href="?page={{ users.next_page_number }}"
+               class="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700
+                      text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600">
+                التالي
+            </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

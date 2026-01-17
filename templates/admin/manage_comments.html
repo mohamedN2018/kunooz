@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-7xl mx-auto px-4 py-6">
+
+    <!-- العنوان + الإحصائيات -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">
+            إدارة التعليقات
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+            مراجعة، اعتماد أو حذف التعليقات
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+            <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg p-4">
+                <p class="text-sm text-gray-500 dark:text-gray-400">إجمالي التعليقات</p>
+                <p class="text-2xl font-bold text-gray-800 dark:text-white">
+                    {{ total_comments }}
+                </p>
+            </div>
+
+            <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg p-4">
+                <p class="text-sm text-gray-500 dark:text-gray-400">تمت الموافقة</p>
+                <p class="text-2xl font-bold text-green-600">
+                    {{ approved_comments }}
+                </p>
+            </div>
+
+            <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg p-4">
+                <p class="text-sm text-gray-500 dark:text-gray-400">قيد المراجعة</p>
+                <p class="text-2xl font-bold text-yellow-500">
+                    {{ pending_comments }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- جدول التعليقات -->
+    <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg overflow-hidden">
+
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                <tr>
+                    <th class="px-4 py-3 text-right">المستخدم</th>
+                    <th class="px-4 py-3 text-right">التعليق</th>
+                    <th class="px-4 py-3 text-right">المقال</th>
+                    <th class="px-4 py-3 text-center">الحالة</th>
+                    <th class="px-4 py-3 text-center">التاريخ</th>
+                    <th class="px-4 py-3 text-center">إجراءات</th>
+                </tr>
+            </thead>
+
+            <tbody class="divide-y dark:divide-gray-700">
+                {% for comment in comments %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                    <td class="px-4 py-3 text-gray-800 dark:text-gray-200">
+                        {{ comment.user.username }}
+                    </td>
+
+                    <td class="px-4 py-3 text-gray-700 dark:text-gray-300 max-w-md truncate">
+                        {{ comment.content }}
+                    </td>
+
+                    <td class="px-4 py-3 text-blue-600 dark:text-blue-400">
+                        <a href="{% url 'post_detail' comment.post.slug %}" target="_blank">
+                            {{ comment.post.title|truncatechars:30 }}
+                        </a>
+                    </td>
+
+                    <td class="px-4 py-3 text-center">
+                        {% if comment.is_approved %}
+                            <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                                مقبول
+                            </span>
+                        {% else %}
+                            <span class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">
+                                قيد المراجعة
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td class="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
+                        {{ comment.created_at|date:"Y-m-d" }}
+                    </td>
+
+                    <td class="px-4 py-3 text-center flex justify-center gap-2">
+                        {% if not comment.is_approved %}
+                        <a href="{% url 'approve_comment' comment.id %}"
+                           class="px-3 py-1 text-xs rounded bg-green-600 text-white hover:bg-green-700">
+                            قبول
+                        </a>
+                        {% endif %}
+
+                        <a href="{% url 'reject_comment' comment.id %}"
+                           class="px-3 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700">
+                            حذف
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
+                        لا توجد تعليقات حالياً
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if comments.has_other_pages %}
+    <div class="flex justify-center mt-6 gap-2">
+        {% if comments.has_previous %}
+            <a href="?page={{ comments.previous_page_number }}"
+               class="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+                السابق
+            </a>
+        {% endif %}
+
+        <span class="px-4 py-1 text-sm text-gray-600 dark:text-gray-300">
+            صفحة {{ comments.number }} من {{ comments.paginator.num_pages }}
+        </span>
+
+        {% if comments.has_next %}
+            <a href="?page={{ comments.next_page_number }}"
+               class="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+                التالي
+            </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

@@ -562,12 +562,12 @@ def edit_post(request, id):
 
 @login_required
 def delete_post(request, id):
-    """حذف منشور"""
+    if request.method != 'POST':
+        return HttpResponseForbidden()
+
     post = get_object_or_404(Post, id=id, author=request.user)
     post.delete()
-    messages.success(request, 'تم حذف المنشور بنجاح!')
-    return redirect('dashboard')
-
+    return redirect('my_posts')
 
 # ======== البحث ========
 def search(request):

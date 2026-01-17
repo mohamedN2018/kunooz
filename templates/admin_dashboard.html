@@ -1,4 +1,3 @@
-<!-- templates/admin_dashboard.html -->
 {% extends 'base.html' %}
 
 {% block title %}لوحة الإدارة - كنوز{% endblock %}
@@ -335,746 +334,850 @@
 {% endblock %}
 
 {% block content %}
-<!-- الهيدر الرئيسي -->
-<header class="dashboard-header bg-white dark:bg-gray-800 shadow-lg mb-8 rounded-xl overflow-hidden">
-    <div class="relative px-8 py-6">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-            <div class="flex-1">
-                <div class="flex items-center gap-4 mb-3">
-                    <div class="icon-wrapper bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-                        <i class="fas fa-cogs"></i>
+    <!-- الهيدر الرئيسي -->
+    <header class="dashboard-header bg-white dark:bg-gray-800 shadow-lg mb-8 rounded-xl overflow-hidden">
+        <div class="relative px-8 py-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div class="flex-1">
+                    <div class="flex items-center gap-4 mb-3">
+                        <div class="icon-wrapper bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+                            <i class="fas fa-cogs"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-800 dark:text-white">لوحة الإدارة</h1>
+                            <p class="text-gray-600 dark:text-gray-300 mt-1">مرحباً {{ user.get_full_name|default:user.username }}، إدارة متكاملة للموقع</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">لوحة الإدارة</h1>
-                        <p class="text-gray-600 dark:text-gray-300 mt-1">مرحباً {{ user.get_full_name|default:user.username }}، إدارة متكاملة للموقع</p>
+                    
+                    <!-- تاريخ اليوم -->
+                    <div class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                        <i class="fas fa-calendar text-gray-500 dark:text-gray-400"></i>
+                        <span class="text-gray-700 dark:text-gray-300 font-medium" id="current-date"></span>
                     </div>
                 </div>
                 
-                <!-- تاريخ اليوم -->
-                <div class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <i class="fas fa-calendar text-gray-500 dark:text-gray-400"></i>
-                    <span class="text-gray-700 dark:text-gray-300 font-medium" id="current-date"></span>
+                <!-- أزرار الإجراءات السريعة -->
+                <div class="flex flex-wrap gap-3">
+                    <a href="/admin/" class="action-btn action-btn-primary shadow-lg">
+                        <i class="fas fa-tools"></i>
+                        لوحة تحكم Django
+                    </a>
+                    <a href="{% url 'create_post' %}" class="action-btn bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg hover:shadow-xl">
+                        <i class="fas fa-plus-circle"></i>
+                        منشور جديد
+                    </a>
+                    <a href="{% url 'dashboard' %}" class="action-btn bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg hover:shadow-xl">
+                        <i class="fas fa-tachometer-alt"></i>
+                        لوحة التحكم
+                    </a>
                 </div>
             </div>
-            
-            <!-- أزرار الإجراءات السريعة -->
-            <div class="flex flex-wrap gap-3">
-                <a href="/admin/" class="action-btn action-btn-primary shadow-lg">
-                    <i class="fas fa-tools"></i>
-                    لوحة تحكم Django
-                </a>
-                <a href="{% url 'create_post' %}" class="action-btn bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg hover:shadow-xl">
-                    <i class="fas fa-plus-circle"></i>
-                    منشور جديد
-                </a>
-                <a href="{% url 'dashboard' %}" class="action-btn bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg hover:shadow-xl">
-                    <i class="fas fa-tachometer-alt"></i>
-                    لوحة التحكم
-                </a>
-            </div>
         </div>
-    </div>
-</header>
+    </header>
 
-<!-- المحتوى الرئيسي -->
-<main class="container mx-auto px-4 pb-12">
-    <!-- الإحصائيات السريعة -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <!-- إجمالي المنشورات -->
-        <div class="stat-card animate-fade-in delay-100 bg-white dark:bg-gray-800 p-6">
-            <div class="flex justify-between items-start mb-6">
-                <div>
-                    <p class="text-gray-500 dark:text-gray-400 text-sm font-medium mb-2">إجمالي المنشورات</p>
-                    <h3 class="text-3xl font-bold text-gray-800 dark:text-white">{{ total_posts }}</h3>
-                </div>
-                <div class="icon-wrapper bg-gradient-to-r from-blue-100 to-blue-200 text-blue-600 dark:from-blue-900 dark:to-blue-800 dark:text-blue-300">
-                    <i class="fas fa-file-alt"></i>
-                </div>
-            </div>
-            <div class="space-y-3">
-                <div class="flex justify-between items-center">
-                    <span class="text-sm text-green-600 dark:text-green-400">
-                        <i class="fas fa-check-circle ml-1"></i> {{ published_posts }} منشور
-                    </span>
-                    <span class="text-sm text-gray-500 dark:text-gray-400">
-                        <i class="fas fa-edit ml-1"></i> {{ draft_posts }} مسودة
-                    </span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill bg-gradient-to-r from-blue-500 to-blue-600" 
-                         style="width: {% if total_posts > 0 %}{{ published_posts|divisibleby:total_posts|floatformat:0 }}{% else %}0{% endif %}%"></div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- إجمالي التعليقات -->
-        <div class="stat-card animate-fade-in delay-200 bg-white dark:bg-gray-800 p-6">
-            <div class="flex justify-between items-start mb-6">
-                <div>
-                    <p class="text-gray-500 dark:text-gray-400 text-sm font-medium mb-2">إجمالي التعليقات</p>
-                    <h3 class="text-3xl font-bold text-gray-800 dark:text-white">{{ total_comments }}</h3>
-                </div>
-                <div class="icon-wrapper bg-gradient-to-r from-green-100 to-green-200 text-green-600 dark:from-green-900 dark:to-green-800 dark:text-green-300">
-                    <i class="fas fa-comments"></i>
-                </div>
-            </div>
-            <div class="space-y-3">
-                <div class="flex justify-between items-center">
-                    <span class="text-sm text-blue-600 dark:text-blue-400">
-                        <i class="fas fa-check ml-1"></i> {{ approved_comments }} مقبول
-                    </span>
-                    <span class="text-sm text-yellow-600 dark:text-yellow-400">
-                        <i class="fas fa-clock ml-1"></i> {{ new_comments.count }} جديد
-                    </span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill bg-gradient-to-r from-green-500 to-green-600" 
-                         style="width: {% if total_comments > 0 %}{{ approved_comments|divisibleby:total_comments|floatformat:0 }}{% else %}0{% endif %}%"></div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- إجمالي المستخدمين -->
-        <div class="stat-card animate-fade-in delay-300 bg-white dark:bg-gray-800 p-6">
-            <div class="flex justify-between items-start mb-6">
-                <div>
-                    <p class="text-gray-500 dark:text-gray-400 text-sm font-medium mb-2">إجمالي المستخدمين</p>
-                    <h3 class="text-3xl font-bold text-gray-800 dark:text-white">{{ total_users }}</h3>
-                </div>
-                <div class="icon-wrapper bg-gradient-to-r from-purple-100 to-purple-200 text-purple-600 dark:from-purple-900 dark:to-purple-800 dark:text-purple-300">
-                    <i class="fas fa-users"></i>
-                </div>
-            </div>
-            <div class="space-y-3">
-                <div class="flex justify-between items-center">
-                    <span class="text-sm text-blue-600 dark:text-blue-400">
-                        <i class="fas fa-user-tie ml-1"></i> {{ active_editors }} محرر
-                    </span>
-                    <span class="text-sm text-gray-500 dark:text-gray-400">
-                        <i class="fas fa-user ml-1"></i> {{ non_editor_users }} مستخدم
-                    </span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill bg-gradient-to-r from-purple-500 to-purple-600" 
-                         style="width: {% if total_users > 0 %}{{ active_editors|divisibleby:total_users|floatformat:0 }}{% else %}0{% endif %}%"></div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- إجمالي المشاهدات -->
-        <div class="stat-card animate-fade-in delay-400 bg-white dark:bg-gray-800 p-6">
-            <div class="flex justify-between items-start mb-6">
-                <div>
-                    <p class="text-gray-500 dark:text-gray-400 text-sm font-medium mb-2">إجمالي المشاهدات</p>
-                    <h3 class="text-3xl font-bold text-gray-800 dark:text-white">{{ total_views }}</h3>
-                </div>
-                <div class="icon-wrapper bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-600 dark:from-yellow-900 dark:to-yellow-800 dark:text-yellow-300">
-                    <i class="fas fa-eye"></i>
-                </div>
-            </div>
-            <div class="space-y-3">
-                <div class="flex justify-between items-center">
-                    <span class="text-sm text-green-600 dark:text-green-400">
-                        <i class="fas fa-chart-line ml-1"></i> {{ views_today }} اليوم
-                    </span>
-                    <span class="text-sm text-gray-500 dark:text-gray-400">
-                        <i class="fas fa-chart-bar ml-1"></i> {{ average_views_per_day }}/يوم
-                    </span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill bg-gradient-to-r from-yellow-500 to-yellow-600" 
-                         style="width: {% if total_views > 1000 %}100{% else %}{{ total_views|divisibleby:1000|floatformat:0 }}{% endif %}%"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- محتوى الصفحة -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- القسم الأيمن (المنشورات والتعليقات) -->
-        <div class="lg:col-span-2 space-y-8">
-            <!-- إحصائيات اليوم -->
-            <div class="content-card bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                        <i class="fas fa-calendar-day text-blue-500"></i>
-                        إحصائيات اليوم
-                    </h2>
-                    <span class="text-sm text-gray-500 dark:text-gray-400">
-                        {{ now|date:"Y/m/d" }}
-                    </span>
-                </div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-xl text-center">
-                        <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ posts_today }}</div>
-                        <div class="text-gray-600 dark:text-gray-300 text-sm mt-1">منشور جديد</div>
+    <!-- المحتوى الرئيسي -->
+    <main class="container mx-auto px-4 pb-12">
+        <!-- الإحصائيات السريعة -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- إجمالي المنشورات -->
+            <div class="stat-card animate-fade-in delay-100 bg-white dark:bg-gray-800 p-6">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <p class="text-gray-500 dark:text-gray-400 text-sm font-medium mb-2">إجمالي المنشورات</p>
+                        <h3 class="text-3xl font-bold text-gray-800 dark:text-white">{{ total_posts }}</h3>
                     </div>
-                    <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-xl text-center">
-                        <div class="text-2xl font-bold text-green-600 dark:text-green-400">{{ comments_today }}</div>
-                        <div class="text-gray-600 dark:text-gray-300 text-sm mt-1">تعليق جديد</div>
+                    <div class="icon-wrapper bg-gradient-to-r from-blue-100 to-blue-200 text-blue-600 dark:from-blue-900 dark:to-blue-800 dark:text-blue-300">
+                        <i class="fas fa-file-alt"></i>
                     </div>
-                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-xl text-center">
-                        <div class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ users_today }}</div>
-                        <div class="text-gray-600 dark:text-gray-300 text-sm mt-1">مستخدم جديد</div>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-green-600 dark:text-green-400">
+                            <i class="fas fa-check-circle ml-1"></i> {{ published_posts }} منشور
+                        </span>
+                        <span class="text-sm text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-edit ml-1"></i> {{ draft_posts }} مسودة
+                        </span>
                     </div>
-                    <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 p-4 rounded-xl text-center">
-                        <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{{ views_today }}</div>
-                        <div class="text-gray-600 dark:text-gray-300 text-sm mt-1">زيارة اليوم</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill bg-gradient-to-r from-blue-500 to-blue-600" 
+                            style="width: {% if total_posts > 0 %}{{ published_posts|divisibleby:total_posts|floatformat:0 }}{% else %}0{% endif %}%"></div>
                     </div>
                 </div>
             </div>
             
-            <!-- المنشورات الأخيرة -->
-            <div class="content-card bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+            <!-- إجمالي التعليقات -->
+            <div class="stat-card animate-fade-in delay-200 bg-white dark:bg-gray-800 p-6">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <p class="text-gray-500 dark:text-gray-400 text-sm font-medium mb-2">إجمالي التعليقات</p>
+                        <h3 class="text-3xl font-bold text-gray-800 dark:text-white">{{ total_comments }}</h3>
+                    </div>
+                    <div class="icon-wrapper bg-gradient-to-r from-green-100 to-green-200 text-green-600 dark:from-green-900 dark:to-green-800 dark:text-green-300">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                </div>
+                <div class="space-y-3">
                     <div class="flex justify-between items-center">
-                        <h2 class="text-xl font-bold text-gray-800 dark:text-white">آخر المنشورات</h2>
-                        <div class="flex items-center gap-4">
-                            <a href="/admin/core/post/" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium flex items-center gap-2">
+                        <span class="text-sm text-blue-600 dark:text-blue-400">
+                            <i class="fas fa-check ml-1"></i> {{ approved_comments }} مقبول
+                        </span>
+                        <span class="text-sm text-yellow-600 dark:text-yellow-400">
+                            <i class="fas fa-clock ml-1"></i> {{ new_comments.count }} جديد
+                        </span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill bg-gradient-to-r from-green-500 to-green-600" 
+                            style="width: {% if total_comments > 0 %}{{ approved_comments|divisibleby:total_comments|floatformat:0 }}{% else %}0{% endif %}%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- إجمالي المستخدمين -->
+            <div class="stat-card animate-fade-in delay-300 bg-white dark:bg-gray-800 p-6">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <p class="text-gray-500 dark:text-gray-400 text-sm font-medium mb-2">إجمالي المستخدمين</p>
+                        <h3 class="text-3xl font-bold text-gray-800 dark:text-white">{{ total_users }}</h3>
+                    </div>
+                    <div class="icon-wrapper bg-gradient-to-r from-purple-100 to-purple-200 text-purple-600 dark:from-purple-900 dark:to-purple-800 dark:text-purple-300">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-blue-600 dark:text-blue-400">
+                            <i class="fas fa-user-tie ml-1"></i> {{ active_editors }} محرر
+                        </span>
+                        <span class="text-sm text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-user ml-1"></i> {{ non_editor_users }} مستخدم
+                        </span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill bg-gradient-to-r from-purple-500 to-purple-600" 
+                            style="width: {% if total_users > 0 %}{{ active_editors|divisibleby:total_users|floatformat:0 }}{% else %}0{% endif %}%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- إجمالي المشاهدات -->
+            <div class="stat-card animate-fade-in delay-400 bg-white dark:bg-gray-800 p-6">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <p class="text-gray-500 dark:text-gray-400 text-sm font-medium mb-2">إجمالي المشاهدات</p>
+                        <h3 class="text-3xl font-bold text-gray-800 dark:text-white">{{ total_views }}</h3>
+                    </div>
+                    <div class="icon-wrapper bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-600 dark:from-yellow-900 dark:to-yellow-800 dark:text-yellow-300">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-green-600 dark:text-green-400">
+                            <i class="fas fa-chart-line ml-1"></i> {{ views_today }} اليوم
+                        </span>
+                        <span class="text-sm text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-chart-bar ml-1"></i> {{ average_views_per_day }}/يوم
+                        </span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill bg-gradient-to-r from-yellow-500 to-yellow-600" 
+                            style="width: {% if total_views > 1000 %}100{% else %}{{ total_views|divisibleby:1000|floatformat:0 }}{% endif %}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- محتوى الصفحة -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- القسم الأيمن (المنشورات والتعليقات) -->
+            <div class="lg:col-span-2 space-y-8">
+                <!-- إحصائيات اليوم -->
+                <div class="content-card bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                            <i class="fas fa-calendar-day text-blue-500"></i>
+                            إحصائيات اليوم
+                        </h2>
+                        <span class="text-sm text-gray-500 dark:text-gray-400">
+                            {{ now|date:"Y/m/d" }}
+                        </span>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-xl text-center">
+                            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ posts_today }}</div>
+                            <div class="text-gray-600 dark:text-gray-300 text-sm mt-1">منشور جديد</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-xl text-center">
+                            <div class="text-2xl font-bold text-green-600 dark:text-green-400">{{ comments_today }}</div>
+                            <div class="text-gray-600 dark:text-gray-300 text-sm mt-1">تعليق جديد</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-xl text-center">
+                            <div class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ users_today }}</div>
+                            <div class="text-gray-600 dark:text-gray-300 text-sm mt-1">مستخدم جديد</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 p-4 rounded-xl text-center">
+                            <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{{ views_today }}</div>
+                            <div class="text-gray-600 dark:text-gray-300 text-sm mt-1">زيارة اليوم</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- المنشورات الأخيرة -->
+                <div class="content-card bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl font-bold text-gray-800 dark:text-white">آخر المنشورات</h2>
+                            <div class="flex items-center gap-4">
+                                <a href="/admin/core/post/" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium flex items-center gap-2">
+                                    عرض الكل
+                                    <i class="fas fa-arrow-left"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="data-table">
+                            <thead class="table-header">
+                                <tr>
+                                    <th class="text-right">العنوان</th>
+                                    <th class="text-right">القسم</th>
+                                    <th class="text-right">المؤلف</th>
+                                    <th class="text-right">الحالة</th>
+                                    <th class="text-right">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for post in recent_posts %}
+                                <tr class="table-row hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                    <td>
+                                        <div class="flex items-center gap-3">
+                                            {% if post.thumbnail or post.featured_image %}
+                                            <img src="{% if post.thumbnail %}{{ post.thumbnail.url }}{% else %}{{ post.featured_image.url }}{% endif %}" 
+                                                alt="{{ post.title }}" 
+                                                class="w-12 h-12 object-cover rounded-lg">
+                                            {% else %}
+                                            <div class="w-12 h-12 bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-file-alt text-gray-500 dark:text-gray-400"></i>
+                                            </div>
+                                            {% endif %}
+                                            <div>
+                                                <div class="font-medium text-gray-800 dark:text-gray-200">{{ post.title|truncatechars:30 }}</div>
+                                                <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ post.created_at|timesince }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
+                                            {% if post.category.category_type == 'courses' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300
+                                            {% elif post.category.category_type == 'articles' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300
+                                            {% elif post.category.category_type == 'grants' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300
+                                            {% else %}bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300{% endif %}">
+                                            <i class="fas {% if post.category.category_type == 'courses' %}fa-video{% elif post.category.category_type == 'articles' %}fa-newspaper{% elif post.category.category_type == 'grants' %}fa-award{% else %}fa-book{% endif %} ml-1"></i>
+                                            {{ post.category.name }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-8 h-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                                {{ post.author.first_name|default:post.author.username|first|upper }}
+                                            </div>
+                                            <span class="text-gray-700 dark:text-gray-300 text-sm">{{ post.author.get_full_name|default:post.author.username|truncatechars:15 }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
+                                            {% if post.status == 'published' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300
+                                            {% elif post.status == 'draft' %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300
+                                            {% elif post.status == 'private' %}bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300
+                                            {% else %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300{% endif %}">
+                                            <i class="fas {% if post.status == 'published' %}fa-check-circle{% elif post.status == 'draft' %}fa-edit{% else %}fa-lock{% endif %} ml-1"></i>
+                                            {{ post.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="flex gap-2">
+                                            <a href="{% url 'post_detail' post.slug %}" 
+                                            class="w-8 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                                            title="معاينة">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'edit_post' post.id %}" 
+                                            class="w-8 h-8 flex items-center justify-center bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors"
+                                            title="تعديل">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="/admin/core/post/{{ post.id }}/change/" 
+                                            class="w-8 h-8 flex items-center justify-center bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors"
+                                            title="إدارة">
+                                                <i class="fas fa-cog"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="py-12 text-center">
+                                        <div class="empty-state">
+                                            <div class="empty-state-icon">
+                                                <i class="fas fa-file-alt"></i>
+                                            </div>
+                                            <h4 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">لا توجد منشورات حالياً</h4>
+                                            <p class="text-gray-500 dark:text-gray-400">ابدأ بإنشاء أول منشور لك</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- التعليقات الجديدة -->
+                <div class="content-card bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl font-bold text-gray-800 dark:text-white">التعليقات الجديدة</h2>
+                            <a href="/admin/core/comment/" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium flex items-center gap-2">
                                 عرض الكل
                                 <i class="fas fa-arrow-left"></i>
                             </a>
                         </div>
                     </div>
-                </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="data-table">
-                        <thead class="table-header">
-                            <tr>
-                                <th class="text-right">العنوان</th>
-                                <th class="text-right">القسم</th>
-                                <th class="text-right">المؤلف</th>
-                                <th class="text-right">الحالة</th>
-                                <th class="text-right">الإجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for post in recent_posts %}
-                            <tr class="table-row hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                                <td>
-                                    <div class="flex items-center gap-3">
-                                        {% if post.thumbnail or post.featured_image %}
-                                        <img src="{% if post.thumbnail %}{{ post.thumbnail.url }}{% else %}{{ post.featured_image.url }}{% endif %}" 
-                                             alt="{{ post.title }}" 
-                                             class="w-12 h-12 object-cover rounded-lg">
-                                        {% else %}
-                                        <div class="w-12 h-12 bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-lg flex items-center justify-center">
-                                            <i class="fas fa-file-alt text-gray-500 dark:text-gray-400"></i>
-                                        </div>
-                                        {% endif %}
-                                        <div>
-                                            <div class="font-medium text-gray-800 dark:text-gray-200">{{ post.title|truncatechars:30 }}</div>
-                                            <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ post.created_at|timesince }}</div>
-                                        </div>
+                    
+                    <div class="divide-y divide-gray-200 dark:divide-gray-700 max-h-96 overflow-y-auto">
+                        {% for comment in new_comments %}
+                        <div class="p-6 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" id="comment-{{ comment.id }}">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                                        {{ comment.name|first|upper }}
                                     </div>
-                                </td>
-                                <td>
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
-                                        {% if post.category.category_type == 'courses' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300
-                                        {% elif post.category.category_type == 'articles' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300
-                                        {% elif post.category.category_type == 'grants' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300
-                                        {% else %}bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300{% endif %}">
-                                        <i class="fas {% if post.category.category_type == 'courses' %}fa-video{% elif post.category.category_type == 'articles' %}fa-newspaper{% elif post.category.category_type == 'grants' %}fa-award{% else %}fa-book{% endif %} ml-1"></i>
-                                        {{ post.category.name }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-8 h-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                            {{ post.author.first_name|default:post.author.username|first|upper }}
-                                        </div>
-                                        <span class="text-gray-700 dark:text-gray-300 text-sm">{{ post.author.get_full_name|default:post.author.username|truncatechars:15 }}</span>
+                                    <div>
+                                        <h4 class="font-medium text-gray-800 dark:text-white">{{ comment.name }}</h4>
+                                        <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">{{ comment.email }}</p>
+                                        <p class="text-gray-600 dark:text-gray-300 mt-3 leading-relaxed">{{ comment.content|truncatechars:150 }}</p>
                                     </div>
-                                </td>
-                                <td>
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
-                                        {% if post.status == 'published' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300
-                                        {% elif post.status == 'draft' %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300
-                                        {% elif post.status == 'private' %}bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300
-                                        {% else %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300{% endif %}">
-                                        <i class="fas {% if post.status == 'published' %}fa-check-circle{% elif post.status == 'draft' %}fa-edit{% else %}fa-lock{% endif %} ml-1"></i>
-                                        {{ post.get_status_display }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="flex gap-2">
-                                        <a href="{% url 'post_detail' post.slug %}" 
-                                           class="w-8 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-                                           title="معاينة">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <a href="{% url 'edit_post' post.id %}" 
-                                           class="w-8 h-8 flex items-center justify-center bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors"
-                                           title="تعديل">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <a href="/admin/core/post/{{ post.id }}/change/" 
-                                           class="w-8 h-8 flex items-center justify-center bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors"
-                                           title="إدارة">
-                                            <i class="fas fa-cog"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="5" class="py-12 text-center">
-                                    <div class="empty-state">
-                                        <div class="empty-state-icon">
-                                            <i class="fas fa-file-alt"></i>
-                                        </div>
-                                        <h4 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">لا توجد منشورات حالياً</h4>
-                                        <p class="text-gray-500 dark:text-gray-400">ابدأ بإنشاء أول منشور لك</p>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <!-- التعليقات الجديدة -->
-            <div class="content-card bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-xl font-bold text-gray-800 dark:text-white">التعليقات الجديدة</h2>
-                        <a href="/admin/core/comment/" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium flex items-center gap-2">
-                            عرض الكل
-                            <i class="fas fa-arrow-left"></i>
-                        </a>
-                    </div>
-                </div>
-                
-                <div class="divide-y divide-gray-200 dark:divide-gray-700 max-h-96 overflow-y-auto">
-                    {% for comment in new_comments %}
-                    <div class="p-6 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" id="comment-{{ comment.id }}">
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="flex items-start gap-4">
-                                <div class="w-12 h-12 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                                    {{ comment.name|first|upper }}
                                 </div>
-                                <div>
-                                    <h4 class="font-medium text-gray-800 dark:text-white">{{ comment.name }}</h4>
-                                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">{{ comment.email }}</p>
-                                    <p class="text-gray-600 dark:text-gray-300 mt-3 leading-relaxed">{{ comment.content|truncatechars:150 }}</p>
-                                </div>
+                                <span class="text-gray-500 dark:text-gray-400 text-sm whitespace-nowrap">{{ comment.created_at|timesince }}</span>
                             </div>
-                            <span class="text-gray-500 dark:text-gray-400 text-sm whitespace-nowrap">{{ comment.created_at|timesince }}</span>
-                        </div>
-                        
-                        <div class="flex justify-between items-center mt-4">
-                            <span class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                                على: 
-                                <a href="{% url 'post_detail' comment.post.slug %}" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium">
-                                    "{{ comment.post.title|truncatechars:30 }}"
-                                </a>
-                                <span class="px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs">
-                                    {{ comment.post.category.name }}
-                                </span>
-                            </span>
                             
+                            <div class="flex justify-between items-center mt-4">
+                                <span class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                                    على: 
+                                    <a href="{% url 'post_detail' comment.post.slug %}" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium">
+                                        "{{ comment.post.title|truncatechars:30 }}"
+                                    </a>
+                                    <span class="px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs">
+                                        {{ comment.post.category.name }}
+                                    </span>
+                                </span>
+                                
+                                {% comment %} <div class="flex gap-2">
+
+                                    <!-- قبول -->
+                                    <button
+                                        onclick="approveComment({{ comment.id }}, event)"
+                                        class="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600
+                                            text-white text-sm rounded-lg hover:opacity-90
+                                            font-medium transition shadow-sm flex items-center gap-1">
+                                        <i class="fas fa-check"></i>
+                                        قبول
+                                    </button>
+
+                                    <!-- رفض -->
+                                    <button
+                                        onclick="rejectComment({{ comment.id }}, event)"
+                                        class="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600
+                                            text-white text-sm rounded-lg hover:opacity-90
+                                            font-medium transition shadow-sm flex items-center gap-1">
+                                        <i class="fas fa-times"></i>
+                                        رفض
+                                    </button>
+
+                                    <!-- تعديل من Django Admin -->
+                                    <a
+                                        href="{% url 'admin:core_comment_change' comment.id %}"
+                                        target="_blank"
+                                        class="px-4 py-2 bg-gradient-to-r from-gray-500 to-gray-600
+                                            text-white text-sm rounded-lg hover:opacity-90
+                                            font-medium transition shadow-sm flex items-center justify-center">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+
+                                </div> {% endcomment %}
+
+                    <tr id="comment-{{ comment.id }}">
+                        <td>{{ comment.user.username }}</td>
+                        <td>{{ comment.post.title }}</td>
+                        <td>{{ comment.content|truncatechars:50 }}</td>
+                        <td>
                             <div class="flex gap-2">
-                                <button onclick="approveComment({{ comment.id }})" 
-                                        class="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm rounded-lg hover:opacity-90 font-medium transition shadow-sm">
-                                    <i class="fas fa-check ml-1"></i> قبول
+                                <!-- قبول -->
+                                <button onclick="approveComment({{ comment.id }}, event)"
+                                    class="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600
+                                        text-white text-sm rounded-lg hover:opacity-90
+                                        font-medium transition shadow-sm flex items-center gap-1">
+                                    <i class="fas fa-check"></i> قبول
                                 </button>
-                                <button onclick="rejectComment({{ comment.id }})" 
-                                        class="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm rounded-lg hover:opacity-90 font-medium transition shadow-sm">
-                                    <i class="fas fa-times ml-1"></i> رفض
+
+                                <!-- رفض -->
+                                <button onclick="rejectComment({{ comment.id }}, event)"
+                                    class="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600
+                                        text-white text-sm rounded-lg hover:opacity-90
+                                        font-medium transition shadow-sm flex items-center gap-1">
+                                    <i class="fas fa-times"></i> رفض
                                 </button>
-                                <a href="/admin/core/comment/{{ comment.id }}/change/" 
-                                   class="px-4 py-2 bg-gradient-to-r from-gray-500 to-gray-600 text-white text-sm rounded-lg hover:opacity-90 font-medium transition shadow-sm">
+
+                                <!-- تعديل من Django Admin -->
+                                <a href="{% url 'admin:core_comment_change' comment.id %}" target="_blank"
+                                class="px-4 py-2 bg-gradient-to-r from-gray-500 to-gray-600
+                                        text-white text-sm rounded-lg hover:opacity-90
+                                        font-medium transition shadow-sm flex items-center gap-1">
                                     <i class="fas fa-edit"></i>
                                 </a>
                             </div>
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div class="p-12 text-center">
-                        <div class="empty-state">
-                            <div class="empty-state-icon">
-                                <i class="fas fa-check-circle"></i>
-                            </div>
-                            <h4 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">لا توجد تعليقات جديدة</h4>
-                            <p class="text-gray-500 dark:text-gray-400">جميع التعليقات معالجة ✓</p>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-        
-        <!-- القسم الجانبي -->
-        <div class="space-y-8">
-            <!-- الإجراءات السريعة -->
-            <div class="content-card bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6">
-                <h3 class="font-bold text-gray-800 dark:text-white mb-6 text-lg flex items-center gap-2">
-                    <i class="fas fa-bolt text-yellow-500"></i>
-                    الإجراءات السريعة
-                </h3>
-                
-                <div class="space-y-4">
-                    <a href="/admin/core/post/add/" 
-                       class="quick-action-card flex items-center justify-between p-4 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group border border-blue-200 dark:border-blue-800">
-                        <div class="flex items-center gap-3">
-                            <div class="icon-wrapper bg-gradient-to-r from-blue-100 to-blue-200 text-blue-600 dark:from-blue-900 dark:to-blue-800 dark:text-blue-300 group-hover:scale-110">
-                                <i class="fas fa-plus-circle"></i>
-                            </div>
-                            <div>
-                                <span class="text-blue-800 dark:text-blue-300 font-medium">إنشاء منشور جديد</span>
-                                <p class="text-blue-600 dark:text-blue-400 text-xs mt-1">منشور جديد في الموقع</p>
+                        </td>
+                    </tr>
+
+
                             </div>
                         </div>
-                        <i class="fas fa-arrow-left text-blue-400 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors"></i>
-                    </a>
-                    
-                    <a href="/admin/core/category/" 
-                       class="quick-action-card flex items-center justify-between p-4 rounded-xl hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors group border border-green-200 dark:border-green-800">
-                        <div class="flex items-center gap-3">
-                            <div class="icon-wrapper bg-gradient-to-r from-green-100 to-green-200 text-green-600 dark:from-green-900 dark:to-green-800 dark:text-green-300 group-hover:scale-110">
-                                <i class="fas fa-folder"></i>
-                            </div>
-                            <div>
-                                <span class="text-green-800 dark:text-green-300 font-medium">إدارة الأقسام</span>
-                                <p class="text-green-600 dark:text-green-400 text-xs mt-1">تعديل وإضافة أقسام</p>
+                        {% empty %}
+                        <div class="p-12 text-center">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <h4 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">لا توجد تعليقات جديدة</h4>
+                                <p class="text-gray-500 dark:text-gray-400">جميع التعليقات معالجة ✓</p>
                             </div>
                         </div>
-                        <i class="fas fa-arrow-left text-green-400 group-hover:text-green-600 dark:group-hover:text-green-300 transition-colors"></i>
-                    </a>
-                    
-                    <a href="/admin/auth/user/" 
-                       class="quick-action-card flex items-center justify-between p-4 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors group border border-purple-200 dark:border-purple-800">
-                        <div class="flex items-center gap-3">
-                            <div class="icon-wrapper bg-gradient-to-r from-purple-100 to-purple-200 text-purple-600 dark:from-purple-900 dark:to-purple-800 dark:text-purple-300 group-hover:scale-110">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div>
-                                <span class="text-purple-800 dark:text-purple-300 font-medium">إدارة المستخدمين</span>
-                                <p class="text-purple-600 dark:text-purple-400 text-xs mt-1">صلاحيات وتعديل المستخدمين</p>
-                            </div>
-                        </div>
-                        <i class="fas fa-arrow-left text-purple-400 group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors"></i>
-                    </a>
-                    
-                    <a href="/admin/core/sitesettings/" 
-                       class="quick-action-card flex items-center justify-between p-4 rounded-xl hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors group border border-yellow-200 dark:border-yellow-800">
-                        <div class="flex items-center gap-3">
-                            <div class="icon-wrapper bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-600 dark:from-yellow-900 dark:to-yellow-800 dark:text-yellow-300 group-hover:scale-110">
-                                <i class="fas fa-cog"></i>
-                            </div>
-                            <div>
-                                <span class="text-yellow-800 dark:text-yellow-300 font-medium">إعدادات الموقع</span>
-                                <p class="text-yellow-600 dark:text-yellow-400 text-xs mt-1">إعدادات عامة للموقع</p>
-                            </div>
-                        </div>
-                        <i class="fas fa-arrow-left text-yellow-400 group-hover:text-yellow-600 dark:group-hover:text-yellow-300 transition-colors"></i>
-                    </a>
-                </div>
-            </div>
-            
-            <!-- إحصائيات الموقع -->
-            <div class="content-card bg-gradient-to-br from-gray-800 to-gray-900 dark:from-gray-900 dark:to-gray-950 text-white rounded-2xl shadow-xl p-6">
-                <h3 class="font-bold mb-6 text-lg">إحصائيات الموقع</h3>
-                
-                <div class="space-y-6">
-                    <div>
-                        <div class="flex justify-between mb-3">
-                            <span class="text-gray-300">نسبة المنشورات المنشورة</span>
-                            <span class="font-medium">{{ published_percentage }}%</span>
-                        </div>
-                        <div class="progress-bar bg-gray-700">
-                            <div class="progress-fill bg-gradient-to-r from-green-400 to-green-600" style="width: {{ published_percentage }}%"></div>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <div class="flex justify-between mb-3">
-                            <span class="text-gray-300">نسبة التعليقات المقبولة</span>
-                            <span class="font-medium">{{ approved_comments_percentage }}%</span>
-                        </div>
-                        <div class="progress-bar bg-gray-700">
-                            <div class="progress-fill bg-gradient-to-r from-blue-400 to-blue-600" style="width: {{ approved_comments_percentage }}%"></div>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <div class="flex justify-between mb-3">
-                            <span class="text-gray-300">نسبة المحررين النشطين</span>
-                            <span class="font-medium">{{ active_editors_percentage }}%</span>
-                        </div>
-                        <div class="progress-bar bg-gray-700">
-                            <div class="progress-fill bg-gradient-to-r from-purple-400 to-purple-600" style="width: {{ active_editors_percentage }}%"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- تفاصيل إضافية -->
-                <div class="mt-8 pt-8 border-t border-gray-700">
-                    <h4 class="font-bold mb-4 text-gray-300">التوزيع حسب النوع</h4>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-gray-700/50 p-4 rounded-lg hover:bg-gray-700 transition-colors">
-                            <div class="text-2xl font-bold text-blue-400">
-                                {% if posts_by_type.courses %}{{ posts_by_type.courses }}{% else %}0{% endif %}
-                            </div>
-                            <div class="text-gray-400 text-xs mt-1">الكورسات</div>
-                        </div>
-                        <div class="bg-gray-700/50 p-4 rounded-lg hover:bg-gray-700 transition-colors">
-                            <div class="text-2xl font-bold text-green-400">
-                                {% if posts_by_type.articles %}{{ posts_by_type.articles }}{% else %}0{% endif %}
-                            </div>
-                            <div class="text-gray-400 text-xs mt-1">المقالات</div>
-                        </div>
-                        <div class="bg-gray-700/50 p-4 rounded-lg hover:bg-gray-700 transition-colors">
-                            <div class="text-2xl font-bold text-yellow-400">
-                                {% if posts_by_type.grants %}{{ posts_by_type.grants }}{% else %}0{% endif %}
-                            </div>
-                            <div class="text-gray-400 text-xs mt-1">المنح</div>
-                        </div>
-                        <div class="bg-gray-700/50 p-4 rounded-lg hover:bg-gray-700 transition-colors">
-                            <div class="text-2xl font-bold text-purple-400">
-                                {% if posts_by_type.books %}{{ posts_by_type.books }}{% else %}0{% endif %}
-                            </div>
-                            <div class="text-gray-400 text-xs mt-1">الكتب</div>
-                        </div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
             
-            <!-- معلومات النظام -->
-            <div class="content-card bg-gradient-to-br from-indigo-900 to-purple-900 dark:from-purple-950 dark:to-indigo-950 text-white rounded-2xl shadow-xl p-6">
-                <h3 class="font-bold mb-6 text-lg flex items-center gap-2">
-                    <i class="fas fa-server"></i>
-                    معلومات النظام
-                </h3>
-                
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center p-3 bg-white/10 rounded-lg">
-                        <span class="text-gray-300">نسخة Django:</span>
-                        <span class="font-medium">4.2.7</span>
-                    </div>
+            <!-- القسم الجانبي -->
+            <div class="space-y-8">
+                <!-- الإجراءات السريعة -->
+                <div class="content-card bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6">
+                    <h3 class="font-bold text-gray-800 dark:text-white mb-6 text-lg flex items-center gap-2">
+                        <i class="fas fa-bolt text-yellow-500"></i>
+                        الإجراءات السريعة
+                    </h3>
                     
-                    <div class="flex justify-between items-center p-3 bg-white/10 rounded-lg">
-                        <span class="text-gray-300">الخادم:</span>
-                        <span class="font-medium text-green-400">
-                            <i class="fas fa-circle text-xs ml-1"></i> نشط
-                        </span>
-                    </div>
-                    
-                    <div class="flex justify-between items-center p-3 bg-white/10 rounded-lg">
-                        <span class="text-gray-300">قاعدة البيانات:</span>
-                        <span class="font-medium">SQLite</span>
-                    </div>
-                    
-                    <div class="flex justify-between items-center p-3 bg-white/10 rounded-lg">
-                        <span class="text-gray-300">الذاكرة المستخدمة:</span>
-                        <span class="font-medium">45%</span>
-                    </div>
-                    
-                    <div class="flex justify-between items-center p-3 bg-white/10 rounded-lg">
-                        <span class="text-gray-300">آخر نسخة احتياطية:</span>
-                        <span class="font-medium">اليوم 10:30</span>
+                    <div class="space-y-4">
+                        <!-- إنشاء منشور جديد -->
+                        <a href="{% url 'create_post' %}" 
+                            class="quick-action-card flex items-center justify-between p-4 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group border border-blue-200 dark:border-blue-800">
+                            <div class="flex items-center gap-3">
+                                <div class="icon-wrapper bg-gradient-to-r from-blue-100 to-blue-200 text-blue-600 dark:from-blue-900 dark:to-blue-800 dark:text-blue-300 group-hover:scale-110">
+                                    <i class="fas fa-plus-circle"></i>
+                                </div>
+                                <div>
+                                    <span class="text-blue-800 dark:text-blue-300 font-medium">إنشاء منشور جديد</span>
+                                    <p class="text-blue-600 dark:text-blue-400 text-xs mt-1">منشور جديد في الموقع</p>
+                                </div>
+                            </div>
+                            <i class="fas fa-arrow-left text-blue-400 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors"></i>
+                        </a>
+
+                        <!-- إدارة التصنيفات -->
+                        <a href=""/admin/core/category/"" 
+                            class="quick-action-card flex items-center justify-between p-4 rounded-xl hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors group border border-green-200 dark:border-green-800">
+                            <div class="flex items-center gap-3">
+                                <div class="icon-wrapper bg-gradient-to-r from-green-100 to-green-200 text-green-600 dark:from-green-900 dark:to-green-800 dark:text-green-300 group-hover:scale-110">
+                                    <i class="fas fa-folder"></i>
+                                </div>
+                                <div>
+                                    <span class="text-green-800 dark:text-green-300 font-medium">إدارة الأقسام</span>
+                                    <p class="text-green-600 dark:text-green-400 text-xs mt-1">تعديل وإضافة أقسام</p>
+                                </div>
+                            </div>
+                            <i class="fas fa-arrow-left text-green-400 group-hover:text-green-600 dark:group-hover:text-green-300 transition-colors"></i>
+                        </a>
+
+                        <!-- إدارة المستخدمين -->
+                        <a href="{% url 'control_users' %}" 
+                            class="quick-action-card flex items-center justify-between p-4 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors group border border-purple-200 dark:border-purple-800">
+                            <div class="flex items-center gap-3">
+                                <div class="icon-wrapper bg-gradient-to-r from-purple-100 to-purple-200 text-purple-600 dark:from-purple-900 dark:to-purple-800 dark:text-purple-300 group-hover:scale-110">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div>
+                                    <span class="text-purple-800 dark:text-purple-300 font-medium">إدارة المستخدمين</span>
+                                    <p class="text-purple-600 dark:text-purple-400 text-xs mt-1">صلاحيات وتعديل المستخدمين</p>
+                                </div>
+                            </div>
+                            <i class="fas fa-arrow-left text-purple-400 group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors"></i>
+                        </a>
+
+                        <!-- إعدادات الموقع -->
+                        <a href="{% url 'control_settings' %}" 
+                            class="quick-action-card flex items-center justify-between p-4 rounded-xl hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors group border border-yellow-200 dark:border-yellow-800">
+                            <div class="flex items-center gap-3">
+                                <div class="icon-wrapper bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-600 dark:from-yellow-900 dark:to-yellow-800 dark:text-yellow-300 group-hover:scale-110">
+                                    <i class="fas fa-cog"></i>
+                                </div>
+                                <div>
+                                    <span class="text-yellow-800 dark:text-yellow-300 font-medium">إعدادات الموقع</span>
+                                    <p class="text-yellow-600 dark:text-yellow-400 text-xs mt-1">إعدادات عامة للموقع</p>
+                                </div>
+                            </div>
+                            <i class="fas fa-arrow-left text-yellow-400 group-hover:text-yellow-600 dark:group-hover:text-yellow-300 transition-colors"></i>
+                        </a>
+
+
                     </div>
                 </div>
                 
-                <div class="mt-8 pt-8 border-t border-purple-700">
-                    <button onclick="runSystemCheck()" 
-                            class="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:opacity-90 font-medium shadow-lg transform hover:-translate-y-0.5 transition flex items-center justify-center gap-2">
-                        <i class="fas fa-sync-alt"></i>
-                        فحص النظام
-                    </button>
+                <!-- إحصائيات الموقع -->
+                <div class="content-card bg-gradient-to-br from-gray-800 to-gray-900 dark:from-gray-900 dark:to-gray-950 text-white rounded-2xl shadow-xl p-6">
+                    <h3 class="font-bold mb-6 text-lg">إحصائيات الموقع</h3>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <div class="flex justify-between mb-3">
+                                <span class="text-gray-300">نسبة المنشورات المنشورة</span>
+                                <span class="font-medium">{{ published_percentage }}%</span>
+                            </div>
+                            <div class="progress-bar bg-gray-700">
+                                <div class="progress-fill bg-gradient-to-r from-green-400 to-green-600" style="width: {{ published_percentage }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between mb-3">
+                                <span class="text-gray-300">نسبة التعليقات المقبولة</span>
+                                <span class="font-medium">{{ approved_comments_percentage }}%</span>
+                            </div>
+                            <div class="progress-bar bg-gray-700">
+                                <div class="progress-fill bg-gradient-to-r from-blue-400 to-blue-600" style="width: {{ approved_comments_percentage }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between mb-3">
+                                <span class="text-gray-300">نسبة المحررين النشطين</span>
+                                <span class="font-medium">{{ active_editors_percentage }}%</span>
+                            </div>
+                            <div class="progress-bar bg-gray-700">
+                                <div class="progress-fill bg-gradient-to-r from-purple-400 to-purple-600" style="width: {{ active_editors_percentage }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- تفاصيل إضافية -->
+                    <div class="mt-8 pt-8 border-t border-gray-700">
+                        <h4 class="font-bold mb-4 text-gray-300">التوزيع حسب النوع</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-gray-700/50 p-4 rounded-lg hover:bg-gray-700 transition-colors">
+                                <div class="text-2xl font-bold text-blue-400">
+                                    {% if posts_by_type.courses %}{{ posts_by_type.courses }}{% else %}0{% endif %}
+                                </div>
+                                <div class="text-gray-400 text-xs mt-1">الكورسات</div>
+                            </div>
+                            <div class="bg-gray-700/50 p-4 rounded-lg hover:bg-gray-700 transition-colors">
+                                <div class="text-2xl font-bold text-green-400">
+                                    {% if posts_by_type.articles %}{{ posts_by_type.articles }}{% else %}0{% endif %}
+                                </div>
+                                <div class="text-gray-400 text-xs mt-1">المقالات</div>
+                            </div>
+                            <div class="bg-gray-700/50 p-4 rounded-lg hover:bg-gray-700 transition-colors">
+                                <div class="text-2xl font-bold text-yellow-400">
+                                    {% if posts_by_type.grants %}{{ posts_by_type.grants }}{% else %}0{% endif %}
+                                </div>
+                                <div class="text-gray-400 text-xs mt-1">المنح</div>
+                            </div>
+                            <div class="bg-gray-700/50 p-4 rounded-lg hover:bg-gray-700 transition-colors">
+                                <div class="text-2xl font-bold text-purple-400">
+                                    {% if posts_by_type.books %}{{ posts_by_type.books }}{% else %}0{% endif %}
+                                </div>
+                                <div class="text-gray-400 text-xs mt-1">الكتب</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- معلومات النظام -->
+                <div class="content-card bg-gradient-to-br from-indigo-900 to-purple-900 dark:from-purple-950 dark:to-indigo-950 text-white rounded-2xl shadow-xl p-6">
+                    <h3 class="font-bold mb-6 text-lg flex items-center gap-2">
+                        <i class="fas fa-server"></i>
+                        معلومات النظام
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center p-3 bg-white/10 rounded-lg">
+                            <span class="text-gray-300">نسخة Django:</span>
+                            <span class="font-medium">4.2.7</span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center p-3 bg-white/10 rounded-lg">
+                            <span class="text-gray-300">الخادم:</span>
+                            <span class="font-medium text-green-400">
+                                <i class="fas fa-circle text-xs ml-1"></i> نشط
+                            </span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center p-3 bg-white/10 rounded-lg">
+                            <span class="text-gray-300">قاعدة البيانات:</span>
+                            <span class="font-medium">SQLite</span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center p-3 bg-white/10 rounded-lg">
+                            <span class="text-gray-300">الذاكرة المستخدمة:</span>
+                            <span class="font-medium">45%</span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center p-3 bg-white/10 rounded-lg">
+                            <span class="text-gray-300">آخر نسخة احتياطية:</span>
+                            <span class="font-medium">اليوم 10:30</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 pt-8 border-t border-purple-700">
+                        <button onclick="runSystemCheck()" 
+                                class="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:opacity-90 font-medium shadow-lg transform hover:-translate-y-0.5 transition flex items-center justify-center gap-2">
+                            <i class="fas fa-sync-alt"></i>
+                            فحص النظام
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-</main>
+    </main>
 
-<!-- JavaScript -->
-<script>
-// دالة لعرض التاريخ الحالي
-function updateCurrentDate() {
-    const now = new Date();
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    const dateString = now.toLocaleDateString('ar-SA', options);
-    document.getElementById('current-date').textContent = dateString;
-}
 
-// دالة لقبول التعليق
-function approveComment(commentId) {
-    if (confirm('هل تريد قبول هذا التعليق؟')) {
-        const button = event.target;
-        const originalHTML = button.innerHTML;
-        
-        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>';
-        button.disabled = true;
-        
-        fetch(`/admin/approve-comment/${commentId}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'Content-Type': 'application/json',
-            },
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const commentElement = document.getElementById(`comment-${commentId}`);
-                commentElement.style.opacity = '0.5';
-                commentElement.style.transform = 'translateX(-20px)';
-                
-                setTimeout(() => {
-                    location.reload();
-                }, 300);
-            } else {
-                button.innerHTML = originalHTML;
-                button.disabled = false;
-                showNotification('حدث خطأ أثناء قبول التعليق', 'error');
+    <script>
+        /* =======================
+        التاريخ
+        ======================= */
+        function updateCurrentDate() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('current-date').textContent =
+                now.toLocaleDateString('ar-SA', options);
+        }
+
+        /* =======================
+        أدوات مساعدة
+        ======================= */
+        function getCSRFToken() {
+            const name = 'csrftoken';
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                cookie = cookie.trim();
+                if (cookie.startsWith(name + '=')) {
+                    return decodeURIComponent(cookie.substring(name.length + 1));
+                }
             }
-        })
-        .catch(error => {
-            button.innerHTML = originalHTML;
-            button.disabled = false;
-            showNotification('حدث خطأ في الاتصال', 'error');
-        });
-    }
-}
+            return null;
+        }
 
-// دالة لرفض التعليق
-function rejectComment(commentId) {
-    if (confirm('هل تريد رفض وحذف هذا التعليق؟')) {
-        const button = event.target;
-        const originalHTML = button.innerHTML;
-        
-        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>';
-        button.disabled = true;
-        
-        fetch(`/admin/reject-comment/${commentId}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'Content-Type': 'application/json',
-            },
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const commentElement = document.getElementById(`comment-${commentId}`);
-                commentElement.style.opacity = '0.3';
-                commentElement.style.transform = 'translateX(20px)';
-                
-                setTimeout(() => {
-                    location.reload();
-                }, 300);
+        function showNotification(message, type = 'info') {
+            const colors = {
+                success: 'bg-green-600',
+                error: 'bg-red-600',
+                info: 'bg-blue-600'
+            };
+
+            const icons = {
+                success: 'check-circle',
+                error: 'exclamation-circle',
+                info: 'info-circle'
+            };
+
+            const notification = document.createElement('div');
+            notification.className = `
+                fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white
+                transform transition-all duration-300 translate-x-full
+                ${colors[type]}
+            `;
+
+            notification.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-${icons[type]}"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+
+            document.body.appendChild(notification);
+
+            setTimeout(() => notification.classList.remove('translate-x-full'), 10);
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        function setLoading(button, loading = true) {
+            if (loading) {
+                button.dataset.original = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                button.disabled = true;
             } else {
-                button.innerHTML = originalHTML;
+                button.innerHTML = button.dataset.original;
                 button.disabled = false;
-                showNotification('حدث خطأ أثناء رفض التعليق', 'error');
-            }
-        })
-        .catch(error => {
-            button.innerHTML = originalHTML;
-            button.disabled = false;
-            showNotification('حدث خطأ في الاتصال', 'error');
-        });
-    }
-}
-
-// دالة لفحص النظام
-function runSystemCheck() {
-    const button = event.target;
-    const originalText = button.innerHTML;
-    
-    button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> جاري الفحص...';
-    button.classList.remove('hover:-translate-y-0.5');
-    
-    setTimeout(() => {
-        button.innerHTML = '<i class="fas fa-check-circle mr-2"></i> تم الفحص بنجاح';
-        button.classList.remove('from-blue-500', 'to-blue-600');
-        button.classList.add('from-green-500', 'to-green-600');
-        
-        showNotification('تم فحص النظام بنجاح', 'success');
-        
-        setTimeout(() => {
-            button.disabled = false;
-            button.innerHTML = originalText;
-            button.classList.remove('from-green-500', 'to-green-600');
-            button.classList.add('from-blue-500', 'to-blue-600', 'hover:-translate-y-0.5');
-        }, 2000);
-    }, 1500);
-}
-
-// دالة لعرض الإشعارات
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg text-white z-50 transform transition-all duration-300 translate-x-full ${type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'}`;
-    notification.innerHTML = `
-        <div class="flex items-center">
-            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} mr-3"></i>
-            <span>${message}</span>
-        </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.classList.remove('translate-x-full');
-    }, 10);
-    
-    setTimeout(() => {
-        notification.classList.add('translate-x-full');
-        setTimeout(() => {
-            document.body.removeChild(notification);
-        }, 300);
-    }, 3000);
-}
-
-// دالة للحصول على CSRF token
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
             }
         }
-    }
-    return cookieValue;
-}
+        // دالة للحصول على CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
 
-// إضافة تأثيرات عند التحميل
-document.addEventListener('DOMContentLoaded', function() {
-    // تحديث التاريخ
-    updateCurrentDate();
-    
-    // إضافة تأثيرات للكروت
-    const cards = document.querySelectorAll('.stat-card, .content-card');
-    cards.forEach((card, index) => {
-        card.style.animationDelay = `${index * 0.1}s`;
-        card.classList.add('animate-fade-in');
-    });
-    
-    // إضافة تأثير للجداول
-    const tableRows = document.querySelectorAll('tbody tr');
-    tableRows.forEach((row, index) => {
-        row.style.animationDelay = `${index * 0.05}s`;
-        row.classList.add('animate-fade-in');
-    });
-    
-    // تحديث الرسوم البيانية
-    updateCharts();
-});
+        /* =======================
+        قبول تعليق
+        ======================= */
+        function approveComment(commentId, event) {
+            if (!confirm('هل تريد قبول هذا التعليق؟')) return;
 
-// دالة لتحديث الرسوم البيانية
-function updateCharts() {
-    // يمكن إضافة رسوم بيانية هنا باستخدام Chart.js أو مكتبة أخرى
-}
+            const button = event.currentTarget; // مهم جداً
+            const originalHTML = button.innerHTML;
 
-// تحديث التاريخ كل دقيقة
-setInterval(updateCurrentDate, 60000);
-</script>
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>';
+            button.disabled = true;
+
+            fetch(`/control/comments/approve/${commentId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest', // ضروري عشان Django يعرف AJAX
+                },
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const commentRow = document.getElementById(`comment-${commentId}`);
+                    commentRow.style.opacity = '0.5';
+                    commentRow.style.transform = 'translateX(-20px)';
+                    setTimeout(() => location.reload(), 300);
+                } else {
+                    button.innerHTML = originalHTML;
+                    button.disabled = false;
+                    showNotification(data.message || 'حدث خطأ', 'error');
+                }
+            })
+            .catch(err => {
+                button.innerHTML = originalHTML;
+                button.disabled = false;
+                showNotification('حدث خطأ في الاتصال', 'error');
+            });
+        }
+
+        function rejectComment(commentId, event) {
+            if (!confirm('هل تريد رفض وحذف هذا التعليق؟')) return;
+
+            const button = event.currentTarget;
+            const originalHTML = button.innerHTML;
+
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>';
+            button.disabled = true;
+
+            fetch(`/control/comments/reject/${commentId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const commentRow = document.getElementById(`comment-${commentId}`);
+                    commentRow.style.opacity = '0.3';
+                    commentRow.style.transform = 'translateX(20px)';
+                    setTimeout(() => location.reload(), 300);
+                } else {
+                    button.innerHTML = originalHTML;
+                    button.disabled = false;
+                    showNotification(data.message || 'حدث خطأ', 'error');
+                }
+            })
+            .catch(err => {
+                button.innerHTML = originalHTML;
+                button.disabled = false;
+                showNotification('حدث خطأ في الاتصال', 'error');
+            });
+        }
+
+        /* =======================
+        رفض تعليق
+        ======================= */
+        function rejectComment(commentId, event) {
+            event.preventDefault();
+
+            if (!confirm('هل تريد رفض وحذف هذا التعليق؟')) return;
+
+            const button = event.target.closest('button');
+            setLoading(button, true);
+
+            fetch(rejectCommentUrl.replace('0', commentId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                },
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('تم رفض التعليق', 'success');
+                    setTimeout(() => location.reload(), 400);
+                } else {
+                    throw new Error();
+                }
+            })
+            .catch(() => {
+                setLoading(button, false);
+                showNotification('حدث خطأ في الاتصال', 'error');
+            });
+        }
+
+        /* =======================
+        فحص النظام (UI فقط)
+        ======================= */
+        function runSystemCheck(event) {
+            const button = event.target.closest('button');
+            const original = button.innerHTML;
+
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> جاري الفحص...';
+
+            setTimeout(() => {
+                button.innerHTML = '<i class="fas fa-check-circle mr-2"></i> تم الفحص';
+                showNotification('تم فحص النظام بنجاح', 'success');
+
+                setTimeout(() => {
+                    button.innerHTML = original;
+                    button.disabled = false;
+                }, 2000);
+            }, 1500);
+        }
+
+        /* =======================
+        عند التحميل
+        ======================= */
+        document.addEventListener('DOMContentLoaded', () => {
+            updateCurrentDate();
+            setInterval(updateCurrentDate, 60000);
+
+            document.querySelectorAll('.stat-card, .content-card, tbody tr')
+                .forEach((el, i) => {
+                    el.style.animationDelay = `${i * 0.05}s`;
+                    el.classList.add('animate-fade-in');
+                });
+        });
+    </script>
 {% endblock %}

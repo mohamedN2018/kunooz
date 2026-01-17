@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-5xl mx-auto px-4 py-6">
+
+    <!-- العنوان -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">
+            إعدادات الموقع
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+            التحكم في الإعدادات العامة والمحتوى الأساسي
+        </p>
+    </div>
+
+    <!-- النموذج -->
+    <form method="post" enctype="multipart/form-data"
+          class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6 space-y-6">
+        {% csrf_token %}
+
+        <!-- معلومات الموقع -->
+        <div>
+            <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+                المعلومات الأساسية
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        اسم الموقع
+                    </label>
+                    {{ form.site_name }}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        البريد الإلكتروني
+                    </label>
+                    {{ form.site_email }}
+                </div>
+            </div>
+        </div>
+
+        <!-- الوصف -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                وصف الموقع
+            </label>
+            {{ form.site_description }}
+        </div>
+
+        <!-- الشعار -->
+        <div>
+            <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+                الهوية البصرية
+            </h2>
+
+            <div class="flex items-center gap-4">
+                {% if settings.logo %}
+                    <img src="{{ settings.logo.url }}"
+                         class="h-16 w-auto rounded border dark:border-gray-700"
+                         alt="Logo">
+                {% endif %}
+
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        شعار الموقع
+                    </label>
+                    {{ form.logo }}
+                </div>
+            </div>
+        </div>
+
+        <!-- إعدادات العرض -->
+        <div>
+            <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+                إعدادات العرض
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="flex items-center gap-2">
+                    {{ form.enable_dark_mode }}
+                    <label class="text-sm text-gray-700 dark:text-gray-300">
+                        تفعيل الوضع الداكن
+                    </label>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    {{ form.show_ads }}
+                    <label class="text-sm text-gray-700 dark:text-gray-300">
+                        عرض الإعلانات
+                    </label>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    {{ form.maintenance_mode }}
+                    <label class="text-sm text-gray-700 dark:text-gray-300">
+                        وضع الصيانة
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- أزرار الحفظ -->
+        <div class="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
+            <a href="/admin/"
+               class="px-4 py-2 rounded-md bg-gray-200 dark:bg-gray-700
+                      text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600">
+                رجوع
+            </a>
+
+            <button type="submit"
+                    class="px-6 py-2 rounded-md bg-blue-600 text-white
+                           hover:bg-blue-700 transition">
+                حفظ التغييرات
+            </button>
+        </div>
+    </form>
+
+</div>
+
+{% endblock %}
