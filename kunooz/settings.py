@@ -32,7 +32,7 @@ CSRF_TRUSTED_ORIGINS = [
     f"https://{MAIN_DOMAIN}",
     f"https://www.{MAIN_DOMAIN}",
 ]
-
+    
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True
 
