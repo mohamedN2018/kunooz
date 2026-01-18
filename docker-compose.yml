@@ -12,7 +12,7 @@ services:
       DB_NAME: mydatabase
       DB_USER: myuser
       DB_PASSWORD: mypassword
-      DB_HOST: db-kunooz-db-mwgvzi  # هنا تم تحديث قيمة DB_HOST
+      DB_HOST: kunooz-db  # هنا استخدم اسم الخدمة مباشرة
       DB_PORT: 5432
     depends_on:
       - kunooz-db
