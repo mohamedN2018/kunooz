@@ -6,12 +6,27 @@ services:
     volumes:
       - ./:/usr/src/app
     ports:
-      # - "8080:8000"  # 8080 على جهازك، 8000 داخل الـ container
       - "80:8000"
-
+    environment:
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: mydatabase
+      DB_USER: myuser
+      DB_PASSWORD: mypassword
+      DB_HOST: kunooz-db
+      DB_PORT: 5432
+    depends_on:
+      - kunooz-db  # تأكد من أن قاعدة البيانات تعمل أولاً
     command: >
-      gunicorn --chdir /usr/src/app
-               --access-logfile -
-               --error-logfile -
-               --bind 0.0.0.0:8000
-               kunooz.wsgi:application
+      bash -c "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn --chdir /usr/src/app --access-logfile - --error-logfile - --bind 0.0.0.0:8000 kunooz.wsgi:application"
+
+  kunooz-db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydatabase
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
