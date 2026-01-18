@@ -27,8 +27,6 @@ services:
     volumes:
       - postgresql_data:/var/lib/postgresql/data
     restart: always
-    networks:
-      - db-net
 
 volumes:
   postgresql_data:
