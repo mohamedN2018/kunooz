@@ -201,6 +201,14 @@ class SiteSettingsAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
+@admin.register(heroSection)
+class heroSectionAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        # منع إضافة أكثر من سجل واحد
+        return not heroSection.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
