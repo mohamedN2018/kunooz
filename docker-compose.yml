@@ -12,10 +12,10 @@ services:
       DB_NAME: mydatabase
       DB_USER: myuser
       DB_PASSWORD: mypassword
-      DB_HOST: kunooz-db
+      DB_HOST: db-kunooz-db-mwgvzi  # هنا تم تحديث قيمة DB_HOST
       DB_PORT: 5432
     depends_on:
-      - kunooz-db  # تأكد من أن قاعدة البيانات تعمل أولاً
+      - kunooz-db
     command: >
       bash -c "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn --chdir /usr/src/app --access-logfile - --error-logfile - --bind 0.0.0.0:8000 kunooz.wsgi:application"
 
