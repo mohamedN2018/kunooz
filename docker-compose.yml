@@ -14,8 +14,6 @@ services:
       DB_PORT: 5432
     depends_on:
       - kunooz-db
-    command: >
-      bash -c "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn --chdir /usr/src/app --access-logfile - --error-logfile - --bind 0.0.0.0:80 kunooz.wsgi:application"
 
   kunooz-db:
     image: postgres:latest
