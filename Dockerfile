@@ -34,7 +34,7 @@ RUN mkdir -p /usr/src/app/static/ && chmod 755 /usr/src/app/static/
 RUN mkdir -p /s3files
 
 # expose port
-EXPOSE 8000
+EXPOSE 80
 
 # start server with gunicorn
-CMD ["gunicorn", "--chdir", "/usr/src/app", "--access-logfile", "-", "--error-logfile", "-", "--bind", "0.0.0.0:8000", "kunooz.wsgi:application"]
+CMD ["gunicorn", "--chdir", "/usr/src/app", "--access-logfile", "-", "--error-logfile", "-", "--bind", "0.0.0.0:80", "kunooz.wsgi:application"]

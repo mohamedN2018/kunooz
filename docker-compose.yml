@@ -5,8 +5,6 @@ services:
     volumes:
       - ./:/usr/src/app
       - django-folder:/s3files
-    ports:
-      - "80:8000"
     environment:
       DB_ENGINE: django.db.backends.postgresql
       DB_NAME: mydatabase
@@ -17,7 +15,7 @@ services:
     depends_on:
       - kunooz-db
     command: >
-      bash -c "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn --chdir /usr/src/app --access-logfile - --error-logfile - --bind 0.0.0.0:8000 kunooz.wsgi:application"
+      bash -c "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn --chdir /usr/src/app --access-logfile - --error-logfile - --bind 0.0.0.0:80 kunooz.wsgi:application"
 
   kunooz-db:
     image: postgres:latest
