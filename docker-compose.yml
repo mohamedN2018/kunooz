@@ -5,6 +5,7 @@ services:
     restart: always
     volumes:
       - ./:/usr/src/app
+      - django-folder:/s3files
     ports:
       - "80:8000"
     environment:
@@ -30,3 +31,4 @@ services:
 
 volumes:
   pgdata:
+  django-folder:
