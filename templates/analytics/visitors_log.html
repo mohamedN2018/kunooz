@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}سجل الزيارات - التحليلات - كنوز{% endblock %}
+{% block meta %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block extra_css %}{% include "analytics/_styles.html" %}{% endblock %}
+{% block content %}
+<div class="az max-w-7xl mx-auto px-4 py-8">
+    <div class="flex flex-wrap items-end justify-between gap-4 mb-5">
+        <div>
+            <h1 class="text-2xl font-bold">سجل الزيارات</h1>
+            <p class="az-sub mt-1">{{ total }} زيارة — كل من دخل الموقع ومتى خرج</p>
+        </div>
+        {% include "analytics/_nav.html" %}
+    </div>
+
+    <form method="get" class="flex flex-wrap gap-2 mb-6 items-center" aria-label="تصفية السجل">
+        <label class="sr-only" for="f-range">الفترة</label>
+        <select id="f-range" name="range" class="az-tab" onchange="this.form.submit()">
+            {% for k, label in ranges.items %}<option value="{{ k }}" {% if k == range_key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+        <label class="sr-only" for="f-status">الحالة</label>
+        <select id="f-status" name="status" class="az-tab" onchange="this.form.submit()">
+            <option value="">كل الزيارات</option>
+            <option value="online" {% if status == 'online' %}selected{% endif %}>متصل الآن</option>
+            <option value="left" {% if status == 'left' %}selected{% endif %}>خرج</option>
+        </select>
+        <label class="sr-only" for="f-who">الزائر</label>
+        <select id="f-who" name="who" class="az-tab" onchange="this.form.submit()">
+            <option value="">كل الزوار</option>
+            <option value="users" {% if who == 'users' %}selected{% endif %}>المسجلون فقط</option>
+            <option value="returning" {% if who == 'returning' %}selected{% endif %}>العائدون فقط</option>
+        </select>
+        <noscript><button type="submit" class="az-tab is-active">تطبيق</button></noscript>
+    </form>
+
+    <section class="az-card">
+        <div class="az-scroll">
+            <table class="az-table">
+                <thead>
+                    <tr>
+                        <th scope="col">الحالة</th><th scope="col">دخل</th><th scope="col">خرج</th><th scope="col">المدة</th>
+                        <th scope="col">الزائر</th><th scope="col">الدولة</th><th scope="col">الجهاز</th><th scope="col">المصدر</th>
+                        <th scope="col">صفحة الدخول</th><th scope="col">آخر صفحة</th><th scope="col">الصفحات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in rows %}
+                    <tr>
+                        <td>{% if v.left %}<span class="az-pill">خرج</span>{% else %}<span class="az-pill" style="background:#dcfce7;color:#166534">● متصل</span>{% endif %}</td>
+                        <td>{{ v.entered }}</td><td>{{ v.left|default:"—" }}</td><td>{{ v.duration }}</td>
+                        <td><span class="az-pill {% if v.is_user %}user{% endif %}">{{ v.who }}</span></td>
+                        <td>{{ v.country }}</td><td>{{ v.device }} · {{ v.browser }}</td><td>{{ v.source }}</td>
+                        <td class="wrap">{{ v.landing }}</td><td class="wrap">{{ v.exit }}</td><td>{{ v.pages }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="11" class="text-center py-10">لا توجد زيارات بهذه التصفية</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% include "includes/pagination.html" %}
+</div>
+{% endblock %}

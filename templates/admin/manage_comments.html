@@ -55,7 +55,8 @@
                 {% for comment in comments %}
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
                     <td class="px-4 py-3 text-gray-800 dark:text-gray-200">
-                        {{ comment.user.username }}
+                        {{ comment.name }}
+                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ comment.email }}</div>
                     </td>
 
                     <td class="px-4 py-3 text-gray-700 dark:text-gray-300 max-w-md truncate">
@@ -86,16 +87,21 @@
 
                     <td class="px-4 py-3 text-center flex justify-center gap-2">
                         {% if not comment.is_approved %}
-                        <a href="{% url 'approve_comment' comment.id %}"
-                           class="px-3 py-1 text-xs rounded bg-green-600 text-white hover:bg-green-700">
-                            قبول
-                        </a>
+                        <form method="post" action="{% url 'control_comment_approve' comment.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="px-3 py-1 text-xs rounded bg-green-600 text-white hover:bg-green-700">
+                                قبول
+                            </button>
+                        </form>
                         {% endif %}
 
-                        <a href="{% url 'reject_comment' comment.id %}"
-                           class="px-3 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700">
-                            حذف
-                        </a>
+                        <form method="post" action="{% url 'control_comment_reject' comment.id %}"
+                              onsubmit="return confirm('هل تريد حذف هذا التعليق نهائياً؟');">
+                            {% csrf_token %}
+                            <button type="submit" class="px-3 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700">
+                                حذف
+                            </button>
+                        </form>
                     </td>
                 </tr>
                 {% empty %}

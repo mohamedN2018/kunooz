@@ -1,5 +1,6 @@
 <!-- templates/articles.html -->
 {% extends 'base.html' %}
+{% load ad_tags %}
 
 {% block title %}المقالات - كنوز{% endblock %}
 
@@ -387,6 +388,7 @@
         {% if posts %}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {% for post in posts %}
+            {% if forloop.counter == 7 %}<div class="col-span-full">{% ad_slot 'list_between' %}</div>{% endif %}
             <div class="animate-article" style="animation-delay: {{ forloop.counter0|divisibleby:3|yesno:'0,0.1,0.2' }}s">
                 <article class="article-card bg-white dark:bg-gray-800">
                     <!-- صورة المقال -->

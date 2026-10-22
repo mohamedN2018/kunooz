@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - كنوز{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ title }}</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400">راجع المنشور بالمعاينة ثم اضغط "نشر". إن كان له تاريخ نشر مستقبلي فسيظهر في موعده.</p>
+        </div>
+        <a href="{% url 'staff_manage_posts' %}" class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700">كل المنشورات</a>
+    </div>
+    {% include "includes/posts_table.html" with posts=posts show_author=True show_approve=True %}
+    {% include "includes/pagination.html" with page_obj=posts %}
+</div>
+{% endblock %}

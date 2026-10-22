@@ -9,6 +9,9 @@ from django.db.models import (
     Case, When, FloatField, Value
 )
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.admin.views.decorators import staff_member_required
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
 from .models import *
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -57,7 +60,7 @@ def get_monthly_analytics():
             year=Extract('start_time', 'year'),
             month=Extract('start_time', 'month'),
             is_bounce=Case(
-                When(pageviews=1, then=1),
+                When(page_count=1, then=1),
                 default=0,
                 output_field=FloatField()
             )
@@ -65,7 +68,7 @@ def get_monthly_analytics():
         .values('year', 'month')
         .annotate(
             sessions=Count('id'),
-            pageviews=Sum('pageviews'),
+            pageviews=Count('pageviews'),
             avg_duration=Avg('total_time_spent'),
             bounce_rate=Avg('is_bounce')  # ✅ هنا الصح
         )
@@ -85,7 +88,7 @@ def get_countries_data():
     ).order_by('-total_visits')[:20]
     
     result = []
-    total_all_visits = Country.objects.aggregate(total=Sum('visits'))['total'] or 1
+    total_all_visits = VisitorSession.objects.count() or 1
     
     for c in countries:
         result.append({
@@ -222,7 +225,7 @@ def get_hourly_analytics(start_date):
         hour=Extract('start_time', 'hour')
     ).values('hour').annotate(
         sessions=Count('id'),
-        pageviews=Sum('pageviews'),
+        pageviews=Count('pageviews'),
         avg_duration=Avg('total_time_spent')
     ).order_by('hour')
     
@@ -255,7 +258,7 @@ def get_daily_analytics(start_date):
         date=TruncDate('start_time')
     ).values('date').annotate(
         sessions=Count('id'),
-        pageviews=Count('pageview'),
+        pageviews=Count('pageviews'),
         avg_duration=Avg('total_time_spent'),
         unique_visitors=Count('ip_address', distinct=True)
     ).order_by('date')
@@ -273,7 +276,7 @@ def get_weekday_analytics(start_date):
         weekday=Extract('start_time', 'week_day') - 1  # تعديل ليتوافق مع Python (0=Sunday)
     ).values('weekday').annotate(
         sessions=Count('id'),
-        pageviews=Count('pageview'),
+        pageviews=Count('pageviews'),
         avg_duration=Avg('total_time_spent')
     ).order_by('weekday')
     
@@ -395,10 +398,34 @@ def calculate_geographic_data():
     return geographic_data
 
 
+
+# ===== قالب عام للصفحات الفرعية =====
+# هذه الصفحات لم يكن لها قوالب (كانت تُرجع خطأ 500)؛ نعرض بياناتها الحقيقية في قالب جدولي موحد.
+def render_report(request, template_name, title, context, tables):
+    """tables: قائمة (عنوان, صفوف dict, أعمدة [(key, label)])"""
+    context = dict(context)
+    context['report_title'] = title
+    context['report_tables'] = [
+        {
+            'title': t_title,
+            'columns': [label for _, label in cols],
+            'rows': [[row.get(key, '') if isinstance(row, dict) else getattr(row, key, '') for key, _ in cols] for row in rows],
+        }
+        for t_title, rows, cols in tables
+    ]
+    return render(request, [template_name, 'analytics/report.html'], context)
+
 # ===== Views الرئيسية =====
-@login_required
+@staff_member_required
 def advanced_analytics_dashboard(request):
-    """لوحة تحليلات متقدمة مع خرائط وتقارير مفصلة"""
+    """اللوحة الرئيسية: حركة الزوار (دخول/خروج/متصلون الآن) لنطاق زمني قابل للاختيار."""
+    from . import reports as traffic
+    return render(request, 'analytics/traffic_dashboard.html', traffic.traffic_report(request.GET.get('range', '7d')))
+
+
+@staff_member_required
+def legacy_analytics_dashboard(request):
+    """اللوحة القديمة (خرائط وتقارير) — متاحة على /analytics/dashboard/advanced/"""
     # حساب الإحصائيات الأساسية
     today = timezone.now().date()
     yesterday = today - timedelta(days=1)
@@ -473,7 +500,7 @@ def advanced_analytics_dashboard(request):
     return render(request, 'analytics/advanced_dashboard.html', context)
 
 
-@login_required
+@staff_member_required
 def simple_analytics_dashboard(request):
     """لوحة تحليلات مبسطة"""
     today = timezone.now().date()
@@ -492,9 +519,9 @@ def simple_analytics_dashboard(request):
     
     # أفضل 5 دول
     top_countries = Country.objects.annotate(
-        visits=Count('visitorsession')
-    ).order_by('-visits')[:5]
-    
+        visits_count=Count('visitorsession')
+    ).order_by('-visits_count')[:5]
+
     # أفضل 5 صفحات
     top_pages = PageView.objects.values('title', 'url').annotate(
         views=Count('id')
@@ -513,10 +540,17 @@ def simple_analytics_dashboard(request):
         'today': today,
     }
     
-    return render(request, 'analytics/simple_dashboard.html', context)
+    return render_report(request, 'analytics/simple_dashboard.html', 'لوحة تحليلات مبسطة', context, [
+        ('الإحصائيات', [{'k': 'إجمالي الزوار', 'v': stats['total_visitors']}, {'k': 'زوار اليوم', 'v': stats['today_visitors']},
+                        {'k': 'إجمالي المشاهدات', 'v': stats['total_pageviews']}, {'k': 'مشاهدات اليوم', 'v': stats['today_pageviews']},
+                        {'k': 'معدل الارتداد %', 'v': round(stats['bounce_rate'], 1)}], [('k', 'المؤشر'), ('v', 'القيمة')]),
+        ('أفضل الدول', top_countries, [('name', 'الدولة'), ('visits_count', 'الزيارات')]),
+        ('أفضل الصفحات', top_pages, [('url', 'الرابط'), ('views', 'المشاهدات')]),
+        ('الأجهزة', devices, [('device_type', 'الجهاز'), ('count', 'العدد')]),
+    ])
 
 
-@login_required
+@staff_member_required
 def country_analytics(request, country_code=None):
     """تحليلات مفصلة لدولة معينة"""
     if country_code:
@@ -550,24 +584,29 @@ def country_analytics(request, country_code=None):
             'stats': country_stats,
         }
         
-        return render(request, 'analytics/country_detail.html', context)
+        return render_report(request, 'analytics/country_detail.html', f'تحليلات {country.name}', context, [
+            ('أشهر الصفحات', country_stats['popular_pages'], [('url', 'الرابط'), ('views', 'المشاهدات')]),
+            ('الأجهزة', country_stats['device_distribution'], [('device_type', 'الجهاز'), ('count', 'العدد')]),
+        ])
     
     else:
         # قائمة جميع الدول
         countries = Country.objects.annotate(
             total_visits=Count('visitorsession'),
             avg_time=Avg('visitorsession__total_time_spent'),
-            last_visit=Max('visitorsession__start_time'),
+            latest_visit=Max('visitorsession__start_time'),
         ).order_by('-total_visits')
         
         context = {
             'countries': countries,
         }
         
-        return render(request, 'analytics/countries_list.html', context)
+        return render_report(request, 'analytics/countries_list.html', 'الدول', context, [
+            ('الدول حسب الزيارات', countries, [('name', 'الدولة'), ('code', 'الكود'), ('total_visits', 'الزيارات'), ('latest_visit', 'آخر زيارة')]),
+        ])
 
 
-@login_required
+@staff_member_required
 def time_analytics(request):
     """تحليلات الوقت"""
     # توزيع الساعات
@@ -591,10 +630,14 @@ def time_analytics(request):
         'peak_weekday': peak_weekday,
     }
     
-    return render(request, 'analytics/time_analytics.html', context)
+    return render_report(request, 'analytics/time_analytics.html', 'تحليلات الوقت', context, [
+        ('حسب الساعة (آخر 30 يوم)', hourly_data, [('hour_display', 'الساعة'), ('sessions', 'الجلسات'), ('pageviews', 'المشاهدات')]),
+        ('حسب اليوم', daily_data, [('date', 'التاريخ'), ('sessions', 'الجلسات'), ('pageviews', 'المشاهدات'), ('unique_visitors', 'زوار فريدون')]),
+        ('حسب أيام الأسبوع (آخر 90 يوم)', weekday_data, [('day_name', 'اليوم'), ('sessions', 'الجلسات'), ('pageviews', 'المشاهدات')]),
+    ])
 
 
-@login_required
+@staff_member_required
 def page_analytics(request):
     """تحليلات الصفحات"""
     # أفضل الصفحات
@@ -619,10 +662,13 @@ def page_analytics(request):
         'landing_pages': landing_pages,
     }
     
-    return render(request, 'analytics/page_analytics.html', context)
+    return render_report(request, 'analytics/page_analytics.html', 'تحليلات الصفحات', context, [
+        ('أكثر الصفحات مشاهدة', top_pages, [('url', 'الرابط'), ('views', 'المشاهدات'), ('avg_time', 'متوسط الوقت')]),
+        ('صفحات الهبوط', landing_pages, [('landing_page', 'الصفحة'), ('count', 'الجلسات')]),
+    ])
 
 
-@login_required
+@staff_member_required
 def device_analytics(request):
     """تحليلات الأجهزة"""
     # توزيع الأجهزة
@@ -652,10 +698,14 @@ def device_analytics(request):
         'operating_systems': operating_systems,
     }
     
-    return render(request, 'analytics/device_analytics.html', context)
+    return render_report(request, 'analytics/device_analytics.html', 'تحليلات الأجهزة', context, [
+        ('الأجهزة', devices, [('device_type', 'الجهاز'), ('count', 'الجلسات')]),
+        ('المتصفحات', browsers, [('browser', 'المتصفح'), ('count', 'الجلسات')]),
+        ('أنظمة التشغيل', operating_systems, [('os', 'النظام'), ('count', 'الجلسات')]),
+    ])
 
 
-@login_required
+@staff_member_required
 def session_details(request, session_id):
     """تفاصيل جلسة محددة"""
     session = get_object_or_404(VisitorSession, session_id=session_id)
@@ -677,18 +727,21 @@ def session_details(request, session_id):
         'session_stats': session_stats,
     }
     
-    return render(request, 'analytics/session_detail.html', context)
+    return render_report(request, 'analytics/session_detail.html', 'تفاصيل الجلسة', context, [
+        ('الصفحات', pageviews, [('url', 'الرابط'), ('timestamp', 'الوقت'), ('time_spent', 'المدة')]),
+    ])
 
 
-@login_required
+@staff_member_required
 def export_analytics(request, format='csv'):
     """تصدير بيانات التحليلات"""
     from django.http import HttpResponse
     import csv
     
     if format == 'csv':
-        response = HttpResponse(content_type='text/csv')
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
         response['Content-Disposition'] = f'attachment; filename="analytics_{timezone.now().date()}.csv"'
+        response.write('﻿')
         
         writer = csv.writer(response)
         
@@ -708,13 +761,13 @@ def export_analytics(request, format='csv'):
         writer.writerow(['الدولة', 'عدد الزيارات', 'متوسط الوقت'])
         
         countries = Country.objects.annotate(
-            visits=Count('visitorsession')
-        ).order_by('-visits')[:20]
+            visits_count=Count('visitorsession')
+        ).order_by('-visits_count')[:20]
         
         for country in countries:
             writer.writerow([
                 country.name,
-                country.visits,
+                country.visits_count,
                 str(country.avg_time_spent())
             ])
         
@@ -728,7 +781,7 @@ def export_analytics(request, format='csv'):
         return HttpResponse('صيغة غير مدعومة')
 
 
-@login_required
+@staff_member_required
 def realtime_analytics(request):
     """الزوار المتصلين حالياً"""
     realtime_visitors = get_realtime_visitors()
@@ -752,25 +805,55 @@ def realtime_analytics(request):
         'last_update': timezone.now(),
     }
     
-    return render(request, 'analytics/realtime_analytics.html', context)
+    return render_report(request, 'analytics/realtime_analytics.html', f'المتصلون الآن ({len(realtime_visitors)})', context, [
+        ('الزوار النشطون (آخر 5 دقائق)', realtime_visitors, [('current_page', 'الصفحة'), ('country', 'الدولة'), ('device', 'الجهاز'), ('browser', 'المتصفح')]),
+    ])
 
 
-@login_required
+@staff_member_required
 def analytics_settings(request):
     """إعدادات لوحة التحليلات"""
-    from .forms import AnalyticsSettingsForm
-    
-    if request.method == 'POST':
-        form = AnalyticsSettingsForm(request.POST)
-        if form.is_valid():
-            # حفظ الإعدادات
-            # يمكنك تخزينها في قاعدة البيانات أو cache
-            pass
-    else:
-        form = AnalyticsSettingsForm()
-    
-    context = {
-        'form': form,
-    }
-    
-    return render(request, 'analytics/settings.html', context)
+    # النموذج السابق لم يكن يحفظ أي شيء؛ إعدادات التتبع الفعلية في متغيرات البيئة (ANALYTICS_ENABLED)
+    messages.info(request, 'إعدادات التتبع تُدار من متغير البيئة ANALYTICS_ENABLED في الخادم.')
+    return redirect('analytics_dashboard')
+
+# ===== حركة الزوار: الدخول والخروج والمتصلون الآن =====
+from django.core.paginator import Paginator
+from . import reports as traffic
+
+
+@staff_member_required
+def visitors_log(request):
+    """سجل كل زيارة: من دخل ومتى، من أين، ماذا تصفح، ومتى خرج."""
+    traffic.close_stale_sessions()
+    key, start, end = traffic.resolve_range(request.GET.get('range', '7d'))
+    qs = VisitorSession.objects.filter(start_time__gte=start, start_time__lt=end).select_related('country', 'user')
+    status = request.GET.get('status', '')
+    if status == 'online':
+        qs = qs.filter(pk__in=traffic.online_now().values('pk'))
+    elif status == 'left':
+        qs = qs.filter(is_active=False)
+    if request.GET.get('who') == 'users':
+        qs = qs.exclude(user=None)
+    elif request.GET.get('who') == 'returning':
+        qs = qs.filter(is_returning=True)
+    page = Paginator(qs.order_by('-start_time'), 50).get_page(request.GET.get('page'))
+    return render(request, 'analytics/visitors_log.html', {
+        'rows': [traffic._visitor_row(s) for s in page],
+        'page_obj': page,
+        'range_key': key,
+        'ranges': traffic.RANGES,
+        'status': status,
+        'who': request.GET.get('who', ''),
+        'total': page.paginator.count,
+    })
+
+
+@staff_member_required
+def live_json(request):
+    """للتحديث التلقائي في اللوحة كل 15 ثانية."""
+    traffic.close_stale_sessions()
+    online = [traffic._visitor_row(s) for s in traffic.online_now()[:50]]
+    today = traffic.traffic_report('today')['kpis']
+    return JsonResponse({'online': online, 'online_count': len(online), 'today': today,
+                         'updated': timezone.localtime().strftime('%H:%M:%S')})

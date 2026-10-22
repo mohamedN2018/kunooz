@@ -3,8 +3,12 @@ services:
     build: .
     restart: always
     volumes:
-      - ./:/usr/src/app
+      # الصور المرفوعة في volume دائم: Dokploy يحذف مجلد الكود ويعيد استنساخه عند كل نشر
+      # (كان ./:/usr/src/app فكانت الصور المرفوعة من لوحة التحكم تضيع مع كل نشر).
+      - kunooz-media:/usr/src/app/media
       - django-folder:/s3files
+    env_file:
+      - .env
     environment:
       DB_ENGINE: django.db.backends.postgresql
       DB_NAME: ${DB_NAME}
@@ -12,7 +16,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_HOST: kunooz-db
       DB_PORT: 5432
-    command: gunicorn --chdir /usr/src/app --timeout 320 --workers 25 --access-logfile /dev/stdout --error-logfile /dev/stderr --bind :80 kunooz.wsgi:application
+      LOCAL: "False"
+    command: gunicorn --chdir /usr/src/app --timeout 320 --workers ${GUNICORN_WORKERS:-25} --access-logfile /dev/stdout --error-logfile /dev/stderr --bind :80 kunooz.wsgi:application
     depends_on:
       - kunooz-db
 
@@ -32,3 +37,4 @@ services:
 volumes:
   postgresql_data:
   django-folder:
+  kunooz-media:

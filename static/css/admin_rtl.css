@@ -1,0 +1,32 @@
+/* Jazzmin (AdminLTE 3) لا يدعم RTL: مع LANGUAGE_CODE='ar' تنتقل القائمة يميناً ويبقى هامش المحتوى يساراً فتتداخل */
+html[dir="rtl"] body { text-align: right; font-family: 'Cairo', 'Source Sans Pro', sans-serif; }
+html[dir="rtl"] .main-sidebar { left: auto; right: 0; }
+
+@media (min-width: 992px) {
+    html[dir="rtl"] body:not(.sidebar-collapse) .content-wrapper,
+    html[dir="rtl"] body:not(.sidebar-collapse) .main-footer,
+    html[dir="rtl"] body:not(.sidebar-collapse) .main-header {
+        margin-left: 0 !important;
+        margin-right: 250px !important;
+    }
+    html[dir="rtl"] body.sidebar-mini.sidebar-collapse .content-wrapper,
+    html[dir="rtl"] body.sidebar-mini.sidebar-collapse .main-footer,
+    html[dir="rtl"] body.sidebar-mini.sidebar-collapse .main-header {
+        margin-left: 0 !important;
+        margin-right: 4.6rem !important;
+    }
+}
+@media (max-width: 991.98px) {
+    html[dir="rtl"] .content-wrapper,
+    html[dir="rtl"] .main-footer,
+    html[dir="rtl"] .main-header { margin-left: 0 !important; margin-right: 0 !important; }
+    html[dir="rtl"] body:not(.sidebar-open) .main-sidebar { margin-right: -250px; margin-left: 0; }
+    html[dir="rtl"] body.sidebar-open .main-sidebar { margin-right: 0; }
+}
+html[dir="rtl"] .nav-sidebar .nav-link > .nav-icon { margin-left: .4rem; margin-right: 0; }
+html[dir="rtl"] .nav-sidebar .nav-link > p > .right { left: 1rem; right: auto; }
+html[dir="rtl"] .ml-auto { margin-left: 0 !important; margin-right: auto !important; }
+html[dir="rtl"] .float-right { float: left !important; }
+html[dir="rtl"] .float-left { float: right !important; }
+html[dir="rtl"] .text-right { text-align: left !important; }
+html[dir="rtl"] #changelist-search .input-group > .form-control { border-radius: 0 .25rem .25rem 0; }

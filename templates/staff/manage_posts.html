@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - كنوز{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ title }}</h1>
+        <a href="{% url 'create_post' %}" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"><i class="fas fa-plus ml-1"></i> منشور جديد</a>
+    </div>
+    <div class="grid grid-cols-3 gap-4 mb-6">
+        {% include "includes/stat_card.html" with label="الإجمالي" value=total_posts %}
+        {% include "includes/stat_card.html" with label="منشور" value=published_posts %}
+        {% include "includes/stat_card.html" with label="مسودات" value=draft_posts %}
+    </div>
+    {% include "includes/posts_table.html" with posts=posts show_author=True %}
+    {% include "includes/pagination.html" with page_obj=posts %}
+</div>
+{% endblock %}

@@ -1,0 +1,10 @@
+<nav class="flex flex-wrap gap-2 text-sm" aria-label="أقسام التحليلات">
+    {% url 'analytics_dashboard' as u_dash %}{% url 'visitors_log' as u_log %}{% url 'advertisements:ads_report' as u_ads %}{% url 'legacy_analytics_dashboard' as u_old %}
+    <a href="{{ u_dash }}" class="az-tab {% if request.path == u_dash %}is-active{% endif %}">حركة الزوار</a>
+    <a href="{{ u_log }}" class="az-tab {% if request.path == u_log %}is-active{% endif %}">سجل الزيارات</a>
+    <a href="{{ u_ads }}" class="az-tab {% if request.path == u_ads %}is-active{% endif %}">الإعلانات</a>
+    <a href="{% url 'page_analytics' %}" class="az-tab">الصفحات</a>
+    <a href="{% url 'country_analytics' %}" class="az-tab">الدول</a>
+    <a href="{{ u_old }}" class="az-tab {% if request.path == u_old %}is-active{% endif %}">الخرائط والتقارير</a>
+    <a href="{% url 'export_analytics' 'csv' %}" class="az-tab">تصدير CSV</a>
+</nav>

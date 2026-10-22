@@ -9,10 +9,32 @@ from django.core.cache import cache
 from datetime import datetime, timedelta
 import json
 import csv
+import re
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.admin.views.decorators import staff_member_required
+from django.urls import reverse
+from django.views.decorators.http import require_POST
 from .models import Advertisement, AdPlacement
 from .forms import AdvertisementForm, AdPlacementForm
 from .utils import get_ad_analytics, clear_ad_cache, validate_ad_image, generate_ad_code
-from .models import Advertisement, AdPlacement
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def is_ads_admin(user):
+    """كان الكود يعتمد على user.user_type غير الموجود في نموذج User فلا أحد يملك الصلاحية."""
+    return user.is_active and user.is_staff
+
+
+def admin_redirect(model, action='changelist'):
+    """يحوّل صفحات الإدارة القديمة (قوالبها غير موجودة) إلى لوحة Django للإعلانات."""
+    @staff_member_required
+    def view(request, pk=None):
+        if action == 'change' and pk is not None:
+            return redirect(reverse(f'admin:advertisements_{model}_change', args=[pk]))
+        return redirect(reverse(f'admin:advertisements_{model}_{action}'))
+    return view
 
 # ==============================================
 # وظائف تتبع الإعلانات (غير محمية بالصلاحيات)
@@ -20,32 +42,25 @@ from .models import Advertisement, AdPlacement
 
 
 def render_ad_placement(request, code):
-    cache_key = f"ad_render_{code}"
-    html = cache.get(cache_key)
-
-    if not html:
-        ads = Advertisement.objects.filter(
-            placement__code=code,
-            active=True,
-            start_date__lte=timezone.now(),
-            end_date__gte=timezone.now()
-        ).select_related("placement").order_by("-priority")[:5]
-
-        html = ""
-        for ad in ads:
-            ad.record_impression()
-            html += ad.get_display_html()
-
-        if not html:
-            html = "<!-- no ads -->"
-
-        cache.set(cache_key, html, 60)
-
-    return HttpResponse(html)
+    """واجهة iframe القديمة (/ads/render/<code>/) — تستخدم نفس العرض الجديد."""
+    from core.models import SiteSettings
+    from .rendering import render_slot
+    html = render_slot({'request': request, 'url_media': SiteSettings.objects.first()}, code)
+    return HttpResponse(html or '<!-- no ads -->')
 
 
+BOT_RE = re.compile(r'bot|crawl|spider|slurp|preview|facebookexternalhit|headless', re.I)
+
+
+def _is_bot(request):
+    return bool(BOT_RE.search(request.META.get('HTTP_USER_AGENT', '')))
+
+
+@csrf_exempt  # sendBeacon من kz-ads.js لا يرسل CSRF؛ لا يغيّر إلا عدّاداً
 def record_impression(request, ad_id):
-    """تسجيل ظهور الإعلان"""
+    """تسجيل ظهور الإعلان (يُستدعى عند رؤية الإعلان فعلاً في الشاشة)"""
+    if _is_bot(request) or request.user.is_staff:
+        return HttpResponse(status=204)
     try:
         ad = get_object_or_404(Advertisement, id=ad_id)
         
@@ -66,7 +81,7 @@ def record_impression(request, ad_id):
         return HttpResponse(status=404)
     except Exception as e:
         # تسجيل الخطأ وإرجاع استجابة فارغة
-        print(f"Error recording impression: {e}")
+        logger.exception("Error recording impression %s", ad_id)
         return HttpResponse(status=500)
 
 def record_click(request, ad_id):
@@ -76,7 +91,8 @@ def record_click(request, ad_id):
         
         # التحقق من أن الإعلان نشط وفعال
         if ad.is_active():
-            ad.record_click()
+            if not (_is_bot(request) or request.user.is_staff):
+                ad.record_click()
             
             # إعادة توجيه إلى رابط الإعلان مع إضافة معلمات التتبع
             redirect_url = ad.link
@@ -88,12 +104,12 @@ def record_click(request, ad_id):
             return redirect(redirect_url)
         
         # إذا كان الإعلان غير نشط، إعادة توجيه إلى الصفحة الرئيسية
-        messages.warning(request, _('This advertisement is no longer active'))
+        messages.warning(request, _('هذا الإعلان لم يعد متاحاً'))
         return redirect('/')
     except Exception as e:
         # تسجيل الخطأ وإعادة التوجيه إلى الصفحة الرئيسية
-        print(f"Error recording click: {e}")
-        messages.error(request, _('An error occurred while processing your request'))
+        logger.exception("Error recording ad click %s", ad_id)
+        messages.error(request, _('حدث خطأ أثناء معالجة طلبك'))
         return redirect('/')
 
 # ==============================================
@@ -101,7 +117,7 @@ def record_click(request, ad_id):
 # ==============================================
 
 @login_required
-@user_passes_test(lambda u: hasattr(u, 'user_type') and u.user_type in ['admin', 'editor'])
+@user_passes_test(is_ads_admin)
 def ad_dashboard(request):
     """لوحة تحكم الإعلانات"""
     # الحصول على معاملات البحث والتصفية
@@ -212,13 +228,13 @@ def ad_dashboard(request):
         'has_previous': page > 1,
         'has_next': page < total_pages,
         'AD_TYPE_CHOICES': Advertisement.AD_TYPE_CHOICES,
-        'user_can_delete': request.user.user_type == 'admin',
+        'user_can_delete': request.user.is_superuser,
     }
     
     return render(request, 'advertisements/dashboard.html', context)
 
 @login_required
-@user_passes_test(lambda u: hasattr(u, 'user_type') and u.user_type in ['admin', 'editor'])
+@user_passes_test(is_ads_admin)
 def analytics_dashboard(request):
     """لوحة تحليل متقدمة للإعلانات"""
     
@@ -341,7 +357,7 @@ def analytics_dashboard(request):
     return render(request, 'advertisements/analytics.html', context)
 
 @login_required
-@user_passes_test(lambda u: hasattr(u, 'user_type') and u.user_type in ['admin', 'editor'])
+@user_passes_test(is_ads_admin)
 def create_ad(request):
     """إنشاء إعلان جديد"""
     if request.method == 'POST':
@@ -351,7 +367,7 @@ def create_ad(request):
             ad = form.save(commit=False)
             
             # إذا كان المستخدم ليس أدمن، نجعل الإعلان غير نشط بانتظار المراجعة
-            if request.user.user_type != 'admin':
+            if not request.user.is_superuser:
                 ad.active = False
                 ad.notes = f"Pending review by admin. Created by {request.user.username}"
                 messages.info(request, _('Your ad has been submitted for review. It will be activated after approval.'))
@@ -375,7 +391,7 @@ def create_ad(request):
             
             messages.success(request, _('Advertisement created successfully'))
             
-            if request.user.user_type == 'admin':
+            if request.user.is_superuser:
                 return redirect('advertisements:dashboard')
             else:
                 return redirect('advertisements:preview', pk=ad.pk)
@@ -394,15 +410,11 @@ def create_ad(request):
     return render(request, 'advertisements/form.html', context)
 
 @login_required
-@user_passes_test(lambda u: hasattr(u, 'user_type') and u.user_type in ['admin', 'editor'])
+@user_passes_test(is_ads_admin)
 def edit_ad(request, pk):
     """تعديل الإعلان"""
     ad = get_object_or_404(Advertisement, pk=pk)
     
-    # التحقق من الصلاحيات: المحررون يمكنهم تعديل إعلاناتهم فقط
-    if request.user.user_type == 'editor' and ad.advertiser_email != request.user.email:
-        messages.error(request, _('You do not have permission to edit this advertisement.'))
-        return redirect('advertisements:dashboard')
     
     if request.method == 'POST':
         form = AdvertisementForm(request.POST, request.FILES, instance=ad)
@@ -447,15 +459,11 @@ def edit_ad(request, pk):
     return render(request, 'advertisements/form.html', context)
 
 @login_required
-@user_passes_test(lambda u: hasattr(u, 'user_type') and u.user_type in ['admin', 'editor'])
+@user_passes_test(is_ads_admin)
 def preview_ad(request, pk):
     """معاينة الإعلان"""
     ad = get_object_or_404(Advertisement, pk=pk)
     
-    # التحقق من الصلاحيات: المحررون يمكنهم معاينة إعلاناتهم فقط
-    if request.user.user_type == 'editor' and ad.advertiser_email != request.user.email:
-        messages.error(request, _('You do not have permission to preview this advertisement.'))
-        return redirect('advertisements:dashboard')
     
     # توليد كود HTML للإعلان
     ad_html = generate_ad_code(ad.ad_type, ad.get_content_for_api(), ad.link, ad.id)
@@ -464,13 +472,13 @@ def preview_ad(request, pk):
         'ad': ad,
         'ad_html': ad_html,
         'preview': True,
-        'can_edit': request.user.user_type == 'admin' or (request.user.user_type == 'editor' and ad.advertiser_email == request.user.email),
+        'can_edit': True,  # الوصول للـ staff فقط
     }
     
     return render(request, 'advertisements/preview.html', context)
 
 @login_required
-@user_passes_test(lambda u: hasattr(u, 'user_type') and u.user_type == 'admin')
+@user_passes_test(is_ads_admin)
 def manage_placements(request):
     """إدارة أماكن الإعلانات"""
     placements = AdPlacement.objects.all().order_by('priority', 'name')
@@ -517,7 +525,8 @@ def manage_placements(request):
     return render(request, 'advertisements/placements.html', context)
 
 @login_required
-@user_passes_test(lambda u: hasattr(u, 'user_type') and u.user_type == 'admin')
+@user_passes_test(is_ads_admin)
+@require_POST
 def toggle_ad_status(request, pk):
     """تفعيل/تعطيل الإعلان"""
     ad = get_object_or_404(Advertisement, pk=pk)
@@ -529,13 +538,14 @@ def toggle_ad_status(request, pk):
     # مسح الكاش
     clear_ad_cache(ad.placement.code)
     
-    status = _('activated') if ad.active else _('deactivated')
-    messages.success(request, _(f'Advertisement {status} successfully'))
+    status = _('تفعيل') if ad.active else _('إيقاف')
+    messages.success(request, f'تم {status} الإعلان')
     
     return redirect('advertisements:dashboard')
 
 @login_required
-@user_passes_test(lambda u: hasattr(u, 'user_type') and u.user_type == 'admin')
+@user_passes_test(is_ads_admin)
+@require_POST
 def delete_ad(request, pk):
     """حذف الإعلان"""
     ad = get_object_or_404(Advertisement, pk=pk)
@@ -549,11 +559,12 @@ def delete_ad(request, pk):
     # مسح الكاش
     clear_ad_cache(placement_code)
     
-    messages.success(request, _('Advertisement deleted successfully'))
+    messages.success(request, _('تم حذف الإعلان'))
     return redirect('advertisements:dashboard')
 
 @login_required
-@user_passes_test(lambda u: hasattr(u, 'user_type') and u.user_type == 'admin')
+@user_passes_test(is_ads_admin)
+@require_POST
 def bulk_actions(request):
     """إجراءات جماعية على الإعلانات"""
     if request.method == 'POST':
@@ -561,7 +572,7 @@ def bulk_actions(request):
         ad_ids = request.POST.getlist('ad_ids')
         
         if not ad_ids:
-            messages.error(request, _('No ads selected'))
+            messages.error(request, _('لم يتم اختيار أي إعلان'))
             return redirect('advertisements:dashboard')
         
         ads = Advertisement.objects.filter(id__in=ad_ids)
@@ -571,16 +582,16 @@ def bulk_actions(request):
         
         if action == 'activate':
             ads.update(active=True)
-            message = _('Selected ads activated successfully')
+            message = _('تم تفعيل الإعلانات المختارة')
         elif action == 'deactivate':
             ads.update(active=False)
-            message = _('Selected ads deactivated successfully')
+            message = _('تم إيقاف الإعلانات المختارة')
         elif action == 'delete':
             count = ads.count()
             ads.delete()
-            message = _(f'{count} ads deleted successfully')
+            message = f'تم حذف {count} إعلان'
         else:
-            messages.error(request, _('Invalid action'))
+            messages.error(request, _('إجراء غير صالح'))
             return redirect('advertisements:dashboard')
         
         # مسح كاش جميع الأماكن المتأثرة
@@ -596,7 +607,7 @@ def bulk_actions(request):
 # ==============================================
 
 @login_required
-@user_passes_test(lambda u: hasattr(u, 'user_type') and u.user_type in ['admin', 'editor'])
+@user_passes_test(is_ads_admin)
 def export_analytics(request):
     """تصدير تحليلات الإعلانات كملف CSV"""
     
@@ -626,9 +637,9 @@ def export_analytics(request):
     
     # كتابة العنوان
     writer.writerow([
-        _('Ad Title'), _('Type'), _('Placement'), _('Advertiser'),
-        _('Start Date'), _('End Date'), _('Impressions'), _('Clicks'),
-        _('CTR'), _('Status'), _('Created At')
+        _('عنوان الإعلان'), _('النوع'), _('المكان'), _('المعلن'),
+        _('تاريخ البدء'), _('تاريخ الانتهاء'), _('مرات الظهور'), _('النقرات'),
+        _('نسبة النقر'), _('الحالة'), _('تاريخ الإنشاء')
     ])
     
     # الحصول على الإعلانات في الفترة المحددة
@@ -639,7 +650,7 @@ def export_analytics(request):
     
     for ad in ads:
         ctr = ad.get_ctr()
-        status = _('Active') if ad.is_active() else _('Inactive')
+        status = _('نشط') if ad.is_active() else _('غير نشط')
         
         writer.writerow([
             ad.title,
@@ -661,13 +672,12 @@ def ad_json_feed(request, placement_code=None):
     """تغذية JSON للإعلانات (للاستخدام في API أو AJAX)"""
     
     # التحقق من الصلاحيات إذا كان الطلب من داخل النظام
-    if request.user.is_authenticated:
-        # المستخدمون غير المخولين لا يحصلون على إعلانات
-        if not hasattr(request.user, 'user_type'):
-            return JsonResponse({'ads': [], 'count': 0})
-    
     # عدد الإعلانات المطلوبة
-    count = int(request.GET.get('count', 3))
+    try:
+        count = int(request.GET.get('count', 3))
+    except (TypeError, ValueError):
+        count = 3
+    count = max(count, 1)
     count = min(count, 10)  # حد أقصى 10 إعلانات
     
     # إنشاء استعلام للإعلانات النشطة
@@ -758,7 +768,7 @@ def ad_json_feed(request, placement_code=None):
 # ==============================================
 
 @login_required
-@user_passes_test(lambda u: hasattr(u, 'user_type') and u.user_type == 'admin')
+@user_passes_test(is_ads_admin)
 def edit_placement(request, pk):
     """تعديل مكان الإعلان"""
     placement = get_object_or_404(AdPlacement, pk=pk)
@@ -771,7 +781,7 @@ def edit_placement(request, pk):
             # مسح الكاش
             clear_ad_cache(placement.code)
             
-            messages.success(request, _('Ad placement updated successfully'))
+            messages.success(request, _('تم تحديث مكان الإعلان'))
             return redirect('advertisements:placements')
     else:
         form = AdPlacementForm(instance=placement)
@@ -785,14 +795,15 @@ def edit_placement(request, pk):
     return render(request, 'advertisements/placement_form.html', context)
 
 @login_required
-@user_passes_test(lambda u: hasattr(u, 'user_type') and u.user_type == 'admin')
+@user_passes_test(is_ads_admin)
+@require_POST
 def delete_placement(request, pk):
     """حذف مكان الإعلان"""
     placement = get_object_or_404(AdPlacement, pk=pk)
     
     # التحقق من عدم وجود إعلانات مرتبطة
     if placement.advertisement_set.exists():
-        messages.error(request, _('Cannot delete placement with active ads. Please move or delete the ads first.'))
+        messages.error(request, _('لا يمكن حذف مكان يحتوي على إعلانات. انقل الإعلانات أو احذفها أولاً.'))
         return redirect('advertisements:placements')
     
     # حفظ الكود لحذف الكاش
@@ -804,7 +815,7 @@ def delete_placement(request, pk):
     # مسح الكاش
     clear_ad_cache(placement_code)
     
-    messages.success(request, _('Ad placement deleted successfully'))
+    messages.success(request, _('تم حذف مكان الإعلان'))
     return redirect('advertisements:placements')
 
 
@@ -813,7 +824,7 @@ def delete_placement(request, pk):
 # ==============================================
 
 @login_required
-@user_passes_test(lambda u: hasattr(u, 'user_type') and u.user_type in ['admin', 'editor'])
+@user_passes_test(is_ads_admin)
 def create_ad_with_targeting(request):
     """إنشاء إعلان جديد مع تحديد وسوم مستهدفة"""
     if request.method == 'POST':
@@ -827,7 +838,7 @@ def create_ad_with_targeting(request):
                 ad.created_by = request.user
             
             # إذا كان المستخدم ليس أدمن، نجعل الإعلان غير نشط بانتظار المراجعة
-            if request.user.user_type != 'admin':
+            if not request.user.is_superuser:
                 ad.active = False
                 ad.notes = f"Pending review by admin. Created by {request.user.username}"
                 messages.info(request, _('Your ad has been submitted for review. It will be activated after approval.'))
@@ -851,7 +862,7 @@ def create_ad_with_targeting(request):
             
             messages.success(request, _('Advertisement created successfully with targeted ads.'))
             
-            if request.user.user_type == 'admin':
+            if request.user.is_superuser:
                 return redirect('advertisements:dashboard')
             else:
                 return redirect('advertisements:preview', pk=ad.pk)
@@ -868,3 +879,67 @@ def create_ad_with_targeting(request):
     }
     
     return render(request, 'advertisements/form_with_targeting.html', context)
+
+
+# ==============================================
+# تقرير الإعلانات وفحص الجاهزية (للـ staff)
+# ==============================================
+from django.contrib.admin.views.decorators import staff_member_required as _staff
+
+
+@_staff
+def ads_report(request):
+    from analytics.reports import RANGES, resolve_range
+    from .models import AdDailyStat
+    from .readiness import check
+
+    key, start, end = resolve_range(request.GET.get('range', '30d'))
+    stats = AdDailyStat.objects.filter(date__gte=timezone.localtime(start).date(), date__lte=timezone.localtime(end).date())
+    by_ad = {r['ad']: r for r in stats.values('ad').annotate(i=Sum('impressions'), c=Sum('clicks'))}
+    now = timezone.now()
+    ads = []
+    for ad in Advertisement.objects.select_related('placement').order_by('-active', '-end_date'):
+        r = by_ad.get(ad.id, {})
+        imp, clk = r.get('i') or 0, r.get('c') or 0
+        if not ad.active:
+            state = ('موقوف', 'off')
+        elif ad.start_date > now:
+            state = ('مجدول', 'sched')
+        elif ad.end_date < now:
+            state = ('انتهى', 'off')
+        else:
+            state = ('يعمل', 'on')
+        ads.append({'ad': ad, 'imp': imp, 'clk': clk, 'ctr': round(clk * 100 / imp, 2) if imp else 0,
+                    'state': state, 'days_left': ad.days_remaining()})
+    totals = stats.aggregate(i=Sum('impressions'), c=Sum('clicks'))
+    placements = []
+    for p in AdPlacement.objects.all().order_by('-active', '-priority'):
+        running = sum(1 for a in ads if a['ad'].placement_id == p.id and a['state'][1] == 'on')
+        imp = sum(a['imp'] for a in ads if a['ad'].placement_id == p.id)
+        placements.append({'p': p, 'running': running, 'imp': imp})
+    daily = list(stats.values('date').annotate(i=Sum('impressions'), c=Sum('clicks')).order_by('date'))
+    return render(request, 'advertisements/report.html', {
+        'readiness': check(),
+        'ads': ads,
+        'placements': placements,
+        'totals': {'imp': totals['i'] or 0, 'clk': totals['c'] or 0,
+                   'ctr': round((totals['c'] or 0) * 100 / totals['i'], 2) if totals['i'] else 0},
+        'daily': daily,
+        'range_key': key,
+        'ranges': RANGES,
+    })
+
+
+@_staff
+def ad_csv(request, pk):
+    """تقرير يومي لإعلان واحد (للإرسال للمعلن)."""
+    from .models import AdDailyStat
+    ad = get_object_or_404(Advertisement, pk=pk)
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="ad_{ad.pk}_report.csv"'
+    response.write('﻿')
+    w = csv.writer(response)
+    w.writerow(['التاريخ', 'مرات الظهور', 'النقرات', 'نسبة النقر %'])
+    for s in AdDailyStat.objects.filter(ad=ad).order_by('date'):
+        w.writerow([s.date.isoformat(), s.impressions, s.clicks, round(s.clicks * 100 / s.impressions, 2) if s.impressions else 0])
+    return response

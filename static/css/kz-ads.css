@@ -1,0 +1,28 @@
+/* الأماكن الإعلانية: موسومة بوضوح "إعلان"، لا تُزيح المحتوى، وتبقى ضمن عرض الشاشة */
+.kz-ad-slot { position: relative; margin: 1.5rem auto; max-width: 100%; text-align: center; clear: both; }
+.kz-ad-label { display: block; font-size: .7rem; letter-spacing: .02em; color: #6b7280; margin-bottom: .35rem; }
+.dark .kz-ad-label { color: #9ca3af; }
+.kz-ad { display: flex; justify-content: center; max-width: 100%; overflow: hidden; }
+.kz-ad + .kz-ad { margin-top: .75rem; }
+.kz-ad-img { max-width: 100%; height: auto; border-radius: .5rem; }
+.kz-ad-text { display: block; max-width: 640px; width: 100%; text-align: right; padding: .9rem 1.1rem; border: 1px solid #e5e7eb;
+              border-radius: .75rem; background: #fff; color: #1f2937; text-decoration: none; }
+.kz-ad-text strong { display: block; margin-bottom: .2rem; color: #1d4ed8; }
+.kz-ad-text span { font-size: .9rem; color: #4b5563; }
+.dark .kz-ad-text { background: #1f2937; border-color: #374151; color: #e5e7eb; }
+.dark .kz-ad-text strong { color: #93c5fd; } .dark .kz-ad-text span { color: #d1d5db; }
+.kz-ad-video { position: relative; width: 100%; max-width: 640px; aspect-ratio: 16 / 9; }
+.kz-ad-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; border-radius: .5rem; }
+.kz-ad-cta { display: block; margin-top: .4rem; font-size: .85rem; color: #1d4ed8; }
+.kz-ad-preview { display: flex; align-items: center; justify-content: center; min-height: 90px; border: 2px dashed #f59e0b;
+                 background: repeating-linear-gradient(45deg, #fffbeb, #fffbeb 10px, #fef3c7 10px, #fef3c7 20px);
+                 border-radius: .75rem; color: #92400e; font-size: .85rem; padding: .75rem; }
+.dark .kz-ad-preview { background: repeating-linear-gradient(45deg, #2a2110, #2a2110 10px, #33280f 10px, #33280f 20px); color: #fcd34d; }
+.kz-ad-preview small { opacity: .8; margin-right: .25rem; }
+.kz-ad[data-preview] { outline: 2px dashed #f59e0b; outline-offset: 4px; border-radius: .5rem; }
+.kz-ads-preview-bar { position: fixed; bottom: 1rem; left: 1rem; z-index: 60; background: #92400e; color: #fff; padding: .5rem .9rem;
+                      border-radius: .75rem; font-size: .8rem; box-shadow: 0 8px 20px rgba(0,0,0,.2); }
+.kz-ads-preview-bar a { color: #fde68a; text-decoration: underline; margin-right: .5rem; }
+@media (min-width: 1280px) {
+    .kz-ad-rail { position: sticky; top: 6rem; }
+}

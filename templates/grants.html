@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load ad_tags %}
 
 {% block title %}المنح والتدريبات - كنوز{% endblock %}
 
@@ -23,7 +24,7 @@
         <div class="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="bg-white bg-opacity-20 p-4 rounded-lg backdrop-blur-sm hover:bg-opacity-30 transition duration-300">
                 <div class="text-2xl font-bold">{{ upcoming_deadlines|default:"0" }}</div>
-                <div class="opacity-90 text-sm">فرصة قريبة</div>
+                <div class="opacity-90 text-sm">موعدها خلال 30 يوماً</div>
             </div>
             <div class="bg-white bg-opacity-20 p-4 rounded-lg backdrop-blur-sm hover:bg-opacity-30 transition duration-300">
                 <div class="text-2xl font-bold">{{ free_opportunities|default:"0" }}</div>
@@ -57,7 +58,7 @@
             <div class="flex items-center space-x-3 space-x-reverse">
                 <div class="text-center">
                     <div class="text-2xl font-bold text-orange-600 dark:text-orange-400">{{ upcoming_deadlines|default:"0" }}</div>
-                    <div class="text-orange-700 dark:text-orange-300 text-sm">فرصة قريبة</div>
+                    <div class="text-orange-700 dark:text-orange-300 text-sm">موعدها خلال 30 يوماً</div>
                 </div>
                 <div class="text-center">
                     <div class="text-2xl font-bold text-orange-600 dark:text-orange-400">{{ free_opportunities|default:"0" }}</div>
@@ -99,8 +100,6 @@
                         <option value="">نوع الفرصة</option>
                         <option value="scholarship" {% if current_type == 'scholarship' %}selected{% endif %}>منحة دراسية</option>
                         <option value="training" {% if current_type == 'training' %}selected{% endif %}>تدريب عملي</option>
-                        <option value="fellowship" {% if current_type == 'fellowship' %}selected{% endif %}>زمالة بحثية</option>
-                        <option value="conference" {% if current_type == 'conference' %}selected{% endif %}>مؤتمر دولي</option>
                     </select>
                     
                     <!-- فلترة الترتيب -->
@@ -128,14 +127,6 @@
             <a href="?type=training&sort=newest" 
                class="{% if current_type == 'training' and current_sort == 'newest' %}bg-orange-600 text-white{% else %}bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300{% endif %} px-4 py-2 rounded-full text-sm font-medium hover:bg-orange-200 dark:hover:bg-orange-800 transition duration-300 shadow-sm">
                 تدريبات عملية
-            </a>
-            <a href="?type=fellowship&sort=" 
-               class="{% if current_type == 'fellowship' %}bg-orange-600 text-white{% else %}bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300{% endif %} px-4 py-2 rounded-full text-sm font-medium hover:bg-orange-200 dark:hover:bg-orange-800 transition duration-300 shadow-sm">
-                زمالات بحثية
-            </a>
-            <a href="?type=conference&sort=" 
-               class="{% if current_type == 'conference' %}bg-orange-600 text-white{% else %}bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300{% endif %} px-4 py-2 rounded-full text-sm font-medium hover:bg-orange-200 dark:hover:bg-orange-800 transition duration-300 shadow-sm">
-                مؤتمرات دولية
             </a>
         </div>
     </div>
@@ -166,7 +157,7 @@
                                     {{ post.category.name }}
                                 </span>
                                 <span class="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-xs font-bold px-3 py-1.5 rounded-full">
-                                    <i class="fas fa-clock ml-1"></i> {{ post.publish_date|date:"Y/m/d" }}
+                                    <i class="fas fa-clock ml-1"></i> {% if post.deadline %}آخر موعد {{ post.deadline|date:"Y/m/d" }}{% else %}{{ post.publish_date|date:"Y/m/d" }}{% endif %}
                                 </span>
                             </div>
                             <span class="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-bold px-3 py-1.5 rounded-full">
@@ -266,6 +257,7 @@
             
             <div class="space-y-6">
                 {% for post in posts %}
+            {% if forloop.counter == 7 %}<div class="col-span-full">{% ad_slot 'list_between' %}</div>{% endif %}
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700 hover:border-orange-200 dark:hover:border-orange-700 grant-card">
                     <div class="md:flex justify-between items-start gap-6">
                         <div class="md:w-3/4">
@@ -280,7 +272,7 @@
                                 </span>
                                 {% endif %}
                                 
-                                {% if "عاجل" in post.title or "urgent" in post.seo_keywords|lower or post.publish_date|timeuntil < "7 days" %}
+                                {% if not post.deadline_passed and post.days_to_deadline is not None and post.days_to_deadline <= 7 or "عاجل" in post.title %}
                                 <span class="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-xs font-bold px-3 py-1.5 rounded-full">
                                     <i class="fas fa-bolt ml-1"></i> عاجل
                                 </span>
@@ -311,8 +303,8 @@
                                 </div>
                                 <div class="flex items-center">
                                     <i class="fas fa-clock ml-2 text-orange-500 dark:text-orange-400"></i>
-                                    <span class="mr-1">الموعد:</span>
-                                    <span>{{ post.publish_date|date:"Y/m/d" }}</span>
+                                    <span class="mr-1">آخر موعد:</span>
+                                    <span>{% if post.deadline %}{{ post.deadline|date:"Y/m/d" }}{% if post.deadline_passed %} (انتهى){% endif %}{% else %}غير محدد{% endif %}</span>
                                 </div>
                                 <div class="flex items-center">
                                     <i class="fas fa-user-graduate ml-2 text-orange-500 dark:text-orange-400"></i>
@@ -346,7 +338,7 @@
                                     تفاصيل الفرصة
                                 </a>
                                 {% if post.link %}
-                                <button onclick="showApplicationLink('{{ post.id }}', {{ post.link_delay|default:30 }})" 
+                                <button type="button" data-application-url="{{ post.link }}" onclick="showApplicationLink('{{ post.id }}', {{ post.link_delay|default:30 }})" 
                                         class="w-full bg-white dark:bg-gray-700 border border-orange-600 dark:border-orange-500 text-orange-600 dark:text-orange-400 px-4 py-2.5 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 font-medium transition duration-300 shadow-sm hover:shadow text-center text-sm">
                                     <i class="fas fa-external-link-alt mr-1"></i> التقديم
                                 </button>
@@ -412,10 +404,6 @@
                 </p>
                 
                 <div class="flex flex-col sm:flex-row justify-center gap-4">
-                    <button onclick="subscribeToNotifications()" 
-                            class="inline-flex items-center justify-center bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-medium transition duration-300 shadow-lg">
-                        <i class="fas fa-bell mr-2"></i> إشعارني بفرص جديدة
-                    </button>
                     <a href="{% url 'courses' %}" 
                        class="inline-flex items-center justify-center bg-white dark:bg-gray-800 border border-orange-600 dark:border-orange-500 text-orange-600 dark:text-orange-400 px-6 py-3 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 font-medium transition duration-300 shadow-sm">
                         <i class="fas fa-video mr-2"></i> تصفح الكورسات
@@ -532,10 +520,11 @@ function showApplicationLink(postId, delay) {
             button.className = originalClass.replace('bg-white', 'bg-green-500').replace('text-orange-600', 'text-white').replace('border-orange-600', 'border-green-500');
             
             // حفظ الرابط الجديد
-            const applicationLink = button.getAttribute('data-application-url') || `/apply/${postId}/`;
+            const applicationLink = button.getAttribute('data-application-url');
+                if (!applicationLink) return;
             
             button.onclick = function() {
-                window.open(applicationLink, '_blank');
+                window.open(applicationLink, '_blank', 'noopener');
                 // إعادة الزر إلى حالته الأصلية
                 setTimeout(() => {
                     button.innerHTML = originalHTML;
@@ -549,26 +538,6 @@ function showApplicationLink(postId, delay) {
     }, 1000);
 }
 
-// الاشتراك في الإشعارات
-function subscribeToNotifications() {
-    const notification = new Notification("كنوز - المنح والتدريبات", {
-        body: "سيتم إعلامك عند إضافة فرص جديدة",
-        icon: "/static/images/logo.png"
-    });
-    
-    // طلب إذن الإشعارات إذا لم يكن مسموحاً
-    if (Notification.permission === "default") {
-        Notification.requestPermission().then(permission => {
-            if (permission === "granted") {
-                alert("تم تفعيل الإشعارات! سيتم إعلامك بآخر الفرص.");
-            }
-        });
-    } else if (Notification.permission === "granted") {
-        alert("أنت مشترك بالفعل في الإشعارات!");
-    } else {
-        alert("يرجى السماح بالإشعارات من إعدادات المتصفح.");
-    }
-}
 
 // تأثيرات الكروت
 document.addEventListener('DOMContentLoaded', function() {

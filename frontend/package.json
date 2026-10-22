@@ -1,0 +1,11 @@
+{
+  "name": "kunooz-frontend",
+  "private": true,
+  "description": "يبني static/css/tailwind.css من القوالب",
+  "scripts": {
+    "build": "tailwindcss -c tailwind.config.js -i tailwind.input.css -o ../static/css/tailwind.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.19"
+  }
+}

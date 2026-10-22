@@ -2,12 +2,80 @@
 import geoip2.database
 import geoip2.errors
 from django.utils import timezone
+from django.db import models
 import user_agents
 from datetime import timedelta
 import os
 from django.conf import settings
 import json
+import uuid
+import logging
+import ipaddress
+import re
+from datetime import datetime, timezone as dt_timezone
+from urllib.parse import urlparse
 from .models import VisitorSession, PageView, Country, RealTimeVisitor
+
+logger = logging.getLogger(__name__)
+
+SESSION_TIMEOUT_SECONDS = 30 * 60
+# أدوات وفحوص آلية لا تُعرّفها مكتبة user_agents كبوتات (ظهرت فعلاً في البيانات: curl و HeadlessChrome)
+NON_HUMAN_UA = re.compile(
+    r'curl|wget|python-requests|python-urllib|httpx|aiohttp|go-http-client|java/|okhttp|node-fetch|axios|'
+    r'headless|phantomjs|puppeteer|playwright|selenium|lighthouse|pagespeed|uptime|monitor|healthcheck|'
+    r'pingdom|statuscake|zabbix|nagios|prometheus|dokploy|traefik|docker|kube-probe|scanner|nikto|nmap|masscan|zgrab',
+    re.I)
+COUNTRY_NAMES_AR = {
+    'EG': 'مصر', 'SA': 'السعودية', 'AE': 'الإمارات', 'QA': 'قطر', 'KW': 'الكويت', 'OM': 'عُمان', 'BH': 'البحرين',
+    'JO': 'الأردن', 'LB': 'لبنان', 'SY': 'سوريا', 'IQ': 'العراق', 'YE': 'اليمن', 'SD': 'السودان', 'DZ': 'الجزائر',
+    'MA': 'المغرب', 'TN': 'تونس', 'LY': 'ليبيا', 'PS': 'فلسطين', 'MR': 'موريتانيا', 'SO': 'الصومال',
+    'US': 'الولايات المتحدة', 'GB': 'المملكة المتحدة', 'FR': 'فرنسا', 'DE': 'ألمانيا', 'TR': 'تركيا',
+    'IN': 'الهند', 'CN': 'الصين', 'RU': 'روسيا', 'BR': 'البرازيل', 'CA': 'كندا', 'NL': 'هولندا', 'IT': 'إيطاليا',
+    'ES': 'إسبانيا', 'MY': 'ماليزيا', 'PK': 'باكستان', 'ID': 'إندونيسيا',
+}
+VISITOR_COOKIE = 'kz_vid'
+SEARCH_ENGINES = ('google.', 'bing.', 'yahoo.', 'duckduckgo.', 'yandex.', 'baidu.', 'ecosia.')
+SOCIAL_SITES = ('facebook.', 'fb.', 'instagram.', 't.co', 'twitter.', 'x.com', 'linkedin.', 'youtube.',
+                'tiktok.', 'whatsapp.', 'telegram.', 't.me', 'reddit.', 'pinterest.', 'snapchat.')
+
+
+def external_referrer(request):
+    """المصدر الخارجي فقط (التنقل داخل الموقع ليس مصدراً)."""
+    ref = (request.META.get('HTTP_REFERER') or '')[:200]
+    if not ref:
+        return None
+    host = urlparse(ref).netloc.lower()
+    if not host or host == request.get_host().lower():
+        return None
+    return ref
+
+
+def classify_source(referrer):
+    if not referrer:
+        return 'direct'
+    host = urlparse(referrer).netloc.lower()
+    if any(s in host for s in SEARCH_ENGINES):
+        return 'search'
+    if any(s in host for s in SOCIAL_SITES):
+        return 'social'
+    return 'referral'
+
+
+def close_session(session_key, ended_at=None):
+    """إغلاق جلسة (خروج الزائر): يُسجَّل وقت الخروج ويُحذف من المتصلين الآن."""
+    try:
+        sid = uuid.UUID(str(session_key))
+    except ValueError:
+        return
+    ended_at = ended_at or timezone.now()
+    session = VisitorSession.objects.filter(session_id=sid, is_active=True).first()
+    if not session:
+        return
+    VisitorSession.objects.filter(pk=session.pk).update(
+        is_active=False, end_time=ended_at,
+        total_time_spent=max(ended_at - session.start_time, timedelta(0)),
+    )
+    RealTimeVisitor.objects.filter(session=session).delete()
 
 class AdvancedAnalyticsMiddleware:
     """Middleware متقدم لتتبع الزوار بدقة"""
@@ -28,62 +96,127 @@ class AdvancedAnalyticsMiddleware:
         # تجنب تتبع طلبات AJAX أو static أو admin
         if self.should_skip_tracking(request):
             return self.get_response(request)
-        
-        # استخراج معلومات المستخدم
-        session_key = request.session.session_key
-        ip_address = self.get_client_ip(request)
+
         user_agent_string = request.META.get('HTTP_USER_AGENT', '')
-        
-        # تحليل User Agent
         user_agent = user_agents.parse(user_agent_string)
+        if user_agent.is_bot or NON_HUMAN_UA.search(user_agent_string) or not user_agent_string:
+            return self.get_response(request)
+        # موظفو الموقع لا يُحسبون زواراً (كانت زياراتهم للوحات التحكم تضخم الأرقام)
+        user = getattr(request, 'user', None)
+        if user is not None and user.is_authenticated and user.is_staff:
+            return self.get_response(request)
+        # الصفحات غير الموجودة (فحوص آلية مثل /v1/models/ و /wp-login.php) ليست زيارات
+        if not self._is_real_page(request.path):
+            return self.get_response(request)
+
+        # session_id في VisitorSession هو UUID؛ مفتاح جلسة Django ليس UUID
+        # (كان ذلك يُفشل كل عمليات الإنشاء بصمت فتظل التحليلات فارغة)
+        # جلسة الزيارة تنتهي بعد 30 دقيقة خمول (نفس معيار Google Analytics) فتبدأ زيارة جديدة
+        now = timezone.now()
+        session_key = request.session.get('analytics_sid')
+        last_ts = request.session.get('analytics_last')
+        if session_key and last_ts and now.timestamp() - last_ts > SESSION_TIMEOUT_SECONDS:
+            close_session(session_key, ended_at=datetime.fromtimestamp(last_ts, tz=dt_timezone.utc))
+            session_key = None
+        if not session_key:
+            session_key = str(uuid.uuid4())
+            request.session['analytics_sid'] = session_key
+        request.session['analytics_last'] = now.timestamp()
+
+        # معرف ثابت للمتصفح (كوكي سنة) = عدد الزوار الفريدين والعائدين
+        visitor_id = request.COOKIES.get(VISITOR_COOKIE)
+        try:
+            visitor_id = str(uuid.UUID(visitor_id)) if visitor_id else None
+        except ValueError:
+            visitor_id = None
+        new_visitor_cookie = None
+        if not visitor_id:
+            visitor_id = new_visitor_cookie = str(uuid.uuid4())
+        request.analytics_visitor_id = visitor_id
+        ip_address = self.get_client_ip(request)
         
         # معلومات الجهاز والمتصفح
         device_info = self.get_device_info(user_agent)
         
-        # معلومات جغرافية
-        geo_info = self.get_geo_info(ip_address)
+        # معلومات جغرافية: GeoIP2 إن وُجدت قاعدته (GEOIP_PATH)، وإلا ترويسة الدولة من CDN (Cloudflare)
+        geo_info = self.get_geo_info(self.get_raw_ip(request)) or self.get_header_country(request)
         
-        # إنشاء أو تحديث جلسة الزائر
-        visitor_session = self.create_or_update_session(
-            request, session_key, ip_address, user_agent_string, device_info, geo_info
-        )
-        
-        # تتبع المشاهدة الحالية
-        if request.method == 'GET':
-            self.track_page_view(request, visitor_session)
-        
-        # تحديث الزوار المتصلين حالياً
-        self.update_realtime_visitor(visitor_session, request)
-        
+        # التتبع يجب ألا يُسقط الصفحة أبداً
+        visitor_session = None
+        try:
+            visitor_session = self.create_or_update_session(
+                request, session_key, ip_address, user_agent_string, device_info, geo_info
+            )
+            if request.method == 'GET':
+                self.track_page_view(request, visitor_session)
+            self.update_realtime_visitor(visitor_session, request)
+        except Exception:
+            logger.exception("فشل تتبع الزيارة")
+
         # إضافة الجلسة إلى request للوصول إليها في views
         request.visitor_session = visitor_session
-        
+
         response = self.get_response(request)
-        
-        # تحديث وقت النشاط بعد إرجاع الاستجابة
-        self.update_session_activity(visitor_session)
-        
+        if new_visitor_cookie:
+            response.set_cookie(VISITOR_COOKIE, new_visitor_cookie, max_age=365 * 24 * 3600,
+                                samesite='Lax', secure=request.is_secure(), httponly=True)
         return response
     
+    @staticmethod
+    def _is_real_page(path):
+        from django.urls import Resolver404, resolve
+        try:
+            resolve(path)
+            return True
+        except Resolver404:
+            return False
+
     def should_skip_tracking(self, request):
         """التحقق إذا كان يجب تخطي التتبع"""
+        if not settings.ANALYTICS_SETTINGS.get('ENABLE_TRACKING', True):
+            return True
+
         skip_paths = [
-            '/admin/', '/static/', '/media/', 
-            '/api/analytics/', '/favicon.ico',
-            '/health/', '/robots.txt'
+            '/admin/', '/static/', '/media/',
+            '/api/analytics/', '/analytics/', '/ads/', '/favicon.ico',
+            '/health', '/robots.txt', '/sitemap.xml', '/autocomplete_search/',
+            '/check-username/', '/check-email/', '/t/', '/feed/', '/editor/',
         ]
-        
-        return any(request.path.startswith(path) for path in skip_paths)
-    
+
+        if any(request.path.startswith(path) for path in skip_paths):
+            return True
+        # طلبات AJAX/fetch لا تُحسب زيارات
+        return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
     def get_client_ip(self, request):
-        """استخراج عنوان IP الحقيقي"""
+        """استخراج عنوان IP الحقيقي (مع إخفاء آخر جزء إذا كان ANONYMIZE_IP مفعلاً)"""
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
+            ip = x_forwarded_for.split(',')[0].strip()
         else:
             ip = request.META.get('REMOTE_ADDR')
-        return ip
+        try:
+            addr = ipaddress.ip_address(ip)
+        except (ValueError, TypeError):
+            return '0.0.0.0'
+        if settings.ANALYTICS_SETTINGS.get('ANONYMIZE_IP', True):
+            prefix = 24 if addr.version == 4 else 48
+            addr = ipaddress.ip_network(f"{addr}/{prefix}", strict=False).network_address
+        return str(addr)
     
+    def get_raw_ip(self, request):
+        # GeoIP يحتاج العنوان الكامل؛ لا يُخزَّن، المخزَّن هو المُخفى
+        forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+        return forwarded.split(',')[0].strip() if forwarded else request.META.get('REMOTE_ADDR')
+
+    def get_header_country(self, request):
+        code = (request.META.get('HTTP_CF_IPCOUNTRY') or request.META.get('HTTP_X_COUNTRY_CODE') or '').upper()
+        if len(code) != 2 or not code.isalpha() or code in ('XX', 'T1'):
+            return None
+        return {'country_code': code, 'country_name': code, 'country_name_ar': COUNTRY_NAMES_AR.get(code, code),
+                'flag_emoji': self.get_flag_emoji(code), 'region': None, 'city': None,
+                'latitude': None, 'longitude': None, 'timezone': None}
+
     def get_device_info(self, user_agent):
         """استخراج معلومات الجهاز من User Agent"""
         return {
@@ -173,11 +306,11 @@ class AdvancedAnalyticsMiddleware:
     def create_or_update_session(self, request, session_key, ip_address, user_agent_string, device_info, geo_info):
         """إنشاء أو تحديث جلسة الزائر"""
         try:
-            # البحث عن جلسة نشطة
-            session = VisitorSession.objects.filter(
-                session_id=session_key,
-                is_active=True
-            ).first()
+            # الجلسة نفسها (حتى لو أُغلقت بإشارة مغادرة ثم عاد خلال 30 دقيقة، مثل تحديث الصفحة → تُستأنف)
+            session = VisitorSession.objects.filter(session_id=session_key).first()
+            if session and not session.is_active:
+                VisitorSession.objects.filter(pk=session.pk).update(is_active=True, end_time=None)
+                session.is_active, session.end_time = True, None
             
             if not session:
                 # إنشاء دولة جديدة إذا لم تكن موجودة
@@ -207,8 +340,12 @@ class AdvancedAnalyticsMiddleware:
                     city=geo_info['city'] if geo_info else None,
                     latitude=geo_info['latitude'] if geo_info else None,
                     longitude=geo_info['longitude'] if geo_info else None,
-                    referrer=request.META.get('HTTP_REFERER'),
-                    landing_page=request.build_absolute_uri(),
+                    referrer=external_referrer(request),
+                    landing_page=request.build_absolute_uri()[:200],
+                    visitor_id=request.analytics_visitor_id,
+                    is_returning=VisitorSession.objects.filter(visitor_id=request.analytics_visitor_id).exists(),
+                    entry_source=classify_source(external_referrer(request)),
+                    last_seen=timezone.now(),
                     metadata={
                         'is_bot': device_info['is_bot'],
                         'timezone': geo_info.get('timezone') if geo_info else None,
@@ -216,9 +353,9 @@ class AdvancedAnalyticsMiddleware:
                 )
             
             return session
-            
-        except Exception as e:
-            # في حالة الخطأ، إرجاع جلسة افتراضية
+
+        except Exception:
+            logger.exception("فشل إنشاء جلسة زائر")
             return None
     
     def track_page_view(self, request, visitor_session):
@@ -232,16 +369,24 @@ class AdvancedAnalyticsMiddleware:
         # تسجيل مشاهدة الصفحة الجديدة
         PageView.objects.create(
             session=visitor_session,
-            url=request.build_absolute_uri(),
-            title=self.get_page_title(request) or request.path,
+            url=request.build_absolute_uri()[:200],
+            title=(self.get_page_title(request) or request.path)[:500],
             time_spent=timedelta(0),  # سيتم تحديثه لاحقاً
             scroll_depth=0,
             is_bounce=False
         )
         
-        # زيادة عدد صفحات الجلسة
-        visitor_session.page_count += 1
-        visitor_session.save()
+        # زيادة عدد صفحات الجلسة (الجلسة الجديدة تبدأ بـ page_count=1 فلا نزيد أول صفحة)
+        if visitor_session.pageviews.count() > 1:
+            VisitorSession.objects.filter(pk=visitor_session.pk).update(page_count=models.F('page_count') + 1)
+            visitor_session.page_count += 1
+        now = timezone.now()
+        VisitorSession.objects.filter(pk=visitor_session.pk).update(
+            total_time_spent=now - visitor_session.start_time,
+            last_seen=now,
+            exit_page=request.build_absolute_uri()[:200],
+            is_active=True,
+        )
     
     def update_previous_page_time(self, visitor_session):
         """تحديث الوقت المنقضي في الصفحة السابقة"""
@@ -271,22 +416,10 @@ class AdvancedAnalyticsMiddleware:
         if not visitor_session:
             return
         
-        realtime_visitor, created = RealTimeVisitor.objects.get_or_create(
+        RealTimeVisitor.objects.update_or_create(
             session=visitor_session,
-            defaults={
-                'current_page': request.build_absolute_uri(),
-                'time_on_page': timedelta(0),
-            }
+            defaults={'current_page': request.build_absolute_uri()[:200]},
         )
-        
-        if not created:
-            realtime_visitor.current_page = request.build_absolute_uri()
-            realtime_visitor.save()
-    
-    def update_session_activity(self, visitor_session):
-        """تحديث آخر نشاط للجلسة"""
-        if visitor_session:
-            visitor_session.save()
     
     def get_page_title(self, request):
         """استخراج عنوان الصفحة"""

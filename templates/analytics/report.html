@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ report_title }} - كنوز{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ report_title }}</h1>
+        <nav class="flex flex-wrap gap-2 text-sm" aria-label="تقارير التحليلات">
+            <a href="{% url 'analytics_dashboard' %}" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700">اللوحة الرئيسية</a>
+            <a href="{% url 'country_analytics' %}" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700">الدول</a>
+            <a href="{% url 'time_analytics' %}" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700">الوقت</a>
+            <a href="{% url 'page_analytics' %}" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700">الصفحات</a>
+            <a href="{% url 'device_analytics' %}" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700">الأجهزة</a>
+            <a href="{% url 'realtime_analytics' %}" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700">المتصلون الآن</a>
+            <a href="{% url 'export_analytics' 'csv' %}" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700">تصدير CSV</a>
+        </nav>
+    </div>
+
+    {% for table in report_tables %}
+    <section class="mb-8 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+        <h2 class="px-4 py-3 font-bold text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700">{{ table.title }}</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                    <tr>{% for col in table.columns %}<th scope="col" class="px-4 py-2 text-right font-semibold">{{ col }}</th>{% endfor %}</tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                    {% for row in table.rows %}
+                    <tr>{% for cell in row %}<td class="px-4 py-2 text-gray-700 dark:text-gray-300 break-all">{{ cell|default_if_none:"—" }}</td>{% endfor %}</tr>
+                    {% empty %}
+                    <tr><td colspan="{{ table.columns|length }}" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">لا توجد بيانات مسجلة بعد</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endfor %}
+</div>
+{% endblock %}

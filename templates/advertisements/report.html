@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% load analytics_tags %}
+{% block title %}الإعلانات - التحليلات - كنوز{% endblock %}
+{% block meta %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block ad_header %}{% endblock %}{% block ad_footer %}{% endblock %}
+{% block extra_css %}{% include "analytics/_styles.html" %}
+<style>
+    .rd-badge { display: inline-flex; align-items: center; gap: .35rem; font-size: .75rem; font-weight: 700; padding: .15rem .55rem; border-radius: 999px; white-space: nowrap; }
+    .rd-ok { background: #dcfce7; color: #14532d; } .rd-warn { background: #fef3c7; color: #78350f; } .rd-fail { background: #fee2e2; color: #7f1d1d; }
+    .dark .rd-ok { background: #14532d; color: #dcfce7; } .dark .rd-warn { background: #78350f; color: #fef3c7; } .dark .rd-fail { background: #7f1d1d; color: #fee2e2; }
+    .st-on { color: var(--az-good-ink); } .st-off { color: var(--az-muted); } .st-sched { color: #b45309; }
+    .verdict { border-inline-start: 6px solid; }
+    .verdict.ok { border-color: #0ca30c; } .verdict.warn { border-color: #fab219; } .verdict.fail { border-color: #d03b3b; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="az max-w-7xl mx-auto px-4 py-8">
+    <div class="flex flex-wrap items-end justify-between gap-4 mb-5">
+        <div>
+            <h1 class="text-2xl font-bold">الإعلانات</h1>
+            <p class="az-sub mt-1">جاهزية الموقع، الأماكن، وأداء كل إعلان</p>
+        </div>
+        {% include "analytics/_nav.html" %}
+    </div>
+
+    <!-- الحكم -->
+    {% with v=readiness.verdict %}
+    <section class="az-card verdict {{ v.0 }} p-5 mb-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <p class="az-sub">هل الموقع جاهز للإعلانات؟</p>
+                <h2 class="text-2xl font-bold mt-1">
+                    {% if v.0 == 'ok' %}✅{% elif v.0 == 'warn' %}⚠️{% else %}⛔{% endif %} {{ v.1 }}
+                </h2>
+                <p class="mt-1" style="color: var(--az-ink-2)">{{ v.2 }}</p>
+            </div>
+            <div class="flex gap-2 text-sm">
+                <span class="rd-badge rd-ok">✓ {{ readiness.oks }} مكتمل</span>
+                <span class="rd-badge rd-warn">! {{ readiness.warns }} تحسين</span>
+                <span class="rd-badge rd-fail">✕ {{ readiness.fails }} مطلوب</span>
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-2 mt-4 text-sm">
+            <a class="az-tab is-active" href="/?ads_preview=1" target="_blank" rel="noopener">معاينة الأماكن على الموقع</a>
+            <a class="az-tab" href="{% url 'admin:advertisements_advertisement_add' %}">إضافة إعلان</a>
+            <a class="az-tab" href="{% url 'admin:advertisements_adplacement_changelist' %}">إدارة الأماكن</a>
+            <a class="az-tab" href="{% url 'admin:core_sitesettings_changelist' %}">تفعيل الإعلانات / AdSense / ads.txt</a>
+            <a class="az-tab" href="{% url 'advertise' %}" target="_blank" rel="noopener">صفحة أعلن معنا</a>
+        </div>
+    </section>
+    {% endwith %}
+
+    <!-- قائمة الفحص -->
+    <section class="az-card mb-6">
+        <h2 class="az-title p-5 pb-3">قائمة الفحص</h2>
+        <ul class="divide-y" style="border-color: var(--az-grid)">
+            {% for it in readiness.items %}
+            <li class="px-5 py-3 flex gap-4 items-start" style="border-color: var(--az-grid)">
+                <span class="rd-badge rd-{{ it.status }} mt-0.5">{% if it.status == 'ok' %}✓ مكتمل{% elif it.status == 'warn' %}! تحسين{% else %}✕ مطلوب{% endif %}</span>
+                <div class="min-w-0">
+                    <div class="font-semibold" style="color: var(--az-ink)">{{ it.title }}</div>
+                    <div class="text-sm" style="color: var(--az-ink-2)">{{ it.detail }}</div>
+                    {% if it.fix %}<div class="text-sm mt-1" style="color: var(--az-muted)">← {{ it.fix }}</div>{% endif %}
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <!-- الأداء -->
+    <form method="get" class="flex flex-wrap gap-2 mb-4" aria-label="الفترة الزمنية">
+        {% for k, label in ranges.items %}
+        <button type="submit" name="range" value="{{ k }}" class="az-tab {% if k == range_key %}is-active{% endif %}">{{ label }}</button>
+        {% endfor %}
+    </form>
+    <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="az-card p-4"><div class="az-kpi-l">مرات الظهور</div><div class="az-kpi-v mt-1">{{ totals.imp }}</div><div class="az-sub">رؤية فعلية في الشاشة</div></div>
+        <div class="az-card p-4"><div class="az-kpi-l">النقرات</div><div class="az-kpi-v mt-1">{{ totals.clk }}</div><div class="az-sub">بدون البوتات والمشرفين</div></div>
+        <div class="az-card p-4"><div class="az-kpi-l">نسبة النقر</div><div class="az-kpi-v mt-1">{{ totals.ctr }}%</div><div class="az-sub">النقرات ÷ الظهور</div></div>
+    </div>
+
+    <section class="az-card mb-6">
+        <h2 class="az-title p-5 pb-3">الأماكن الإعلانية ({{ placements|length }})</h2>
+        <div class="az-scroll">
+            <table class="az-table">
+                <thead><tr><th scope="col">المكان</th><th scope="col">الكود</th><th scope="col">المقاس</th><th scope="col">إعلانات تعمل</th><th scope="col">ظهور في الفترة</th><th scope="col">الحالة</th><th scope="col"></th></tr></thead>
+                <tbody>
+                    {% for row in placements %}
+                    <tr>
+                        <td style="color: var(--az-ink)">{{ row.p.name }}</td><td dir="ltr"><code>{{ row.p.code }}</code></td>
+                        <td dir="ltr">{{ row.p.width }}×{{ row.p.height }}</td><td>{{ row.running }}</td><td>{{ row.imp }}</td>
+                        <td>{% if row.p.active %}<span class="st-on">● نشط</span>{% else %}<span class="st-off">○ متوقف</span>{% endif %}</td>
+                        <td><a class="az-tab" href="{% url 'admin:advertisements_adplacement_change' row.p.pk %}">تعديل</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center py-6">لا توجد أماكن. شغّل <code>python manage.py migrate</code> لإنشاء الأماكن الافتراضية.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="az-card mb-6">
+        <h2 class="az-title p-5 pb-3">الإعلانات ({{ ads|length }})</h2>
+        <div class="az-scroll">
+            <table class="az-table">
+                <thead><tr><th scope="col">الإعلان</th><th scope="col">المكان</th><th scope="col">الحالة</th><th scope="col">ينتهي</th><th scope="col">الظهور</th><th scope="col">النقرات</th><th scope="col">نسبة النقر</th><th scope="col"></th></tr></thead>
+                <tbody>
+                    {% with top=ads.0.imp %}
+                    {% for row in ads %}
+                    <tr>
+                        <td style="color: var(--az-ink)">{{ row.ad.title }}{% if row.ad.advertiser_name %}<div class="az-sub">{{ row.ad.advertiser_name }}</div>{% endif %}</td>
+                        <td>{{ row.ad.placement.name }}</td>
+                        <td><span class="st-{{ row.state.1 }}">{% if row.state.1 == 'on' %}●{% elif row.state.1 == 'sched' %}◔{% else %}○{% endif %} {{ row.state.0 }}</span></td>
+                        <td>{{ row.ad.end_date|date:"Y/m/d" }}{% if row.state.1 == 'on' %} <span class="az-sub">({{ row.days_left }} يوم)</span>{% endif %}</td>
+                        <td>{{ row.imp }}</td><td>{{ row.clk }}</td><td>{{ row.ctr }}%</td>
+                        <td class="whitespace-nowrap">
+                            <a class="az-tab" href="{% url 'admin:advertisements_advertisement_change' row.ad.pk %}">تعديل</a>
+                            <a class="az-tab" href="{% url 'advertisements:ad_csv' row.ad.pk %}">تقرير CSV</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center py-6">لا توجد إعلانات بعد. <a class="underline" href="{% url 'admin:advertisements_advertisement_add' %}">أضف أول إعلان</a></td></tr>
+                    {% endfor %}
+                    {% endwith %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="az-card p-5">
+        <h2 class="az-title mb-3">خطوات تشغيل الإعلانات</h2>
+        <ol class="list-decimal pr-5 space-y-2 text-sm" style="color: var(--az-ink-2)">
+            <li><strong>راجع الأماكن</strong>: افتح أي صفحة بإضافة <code dir="ltr">?ads_preview=1</code> (تظهر لك فقط كمربعات مخططة).</li>
+            <li><strong>إعلان مباشر من معلن</strong>: لوحة الإدارة ← الإعلانات ← إضافة: اختر المكان والنوع (صورة/نص/فيديو) والتواريخ ورابط المعلن.</li>
+            <li><strong>Google AdSense</strong>: قدّم بالموقع على adsense.google.com ← بعد القبول ضع معرف <code dir="ltr">ca-pub-…</code> وسطر <code>ads.txt</code> في إعدادات الموقع، وأضف وحدة إعلانية كإعلان من نوع "كود HTML" في المكان الذي تريده.</li>
+            <li><strong>فعّل الإعلانات</strong> من إعدادات الموقع. بعدها يظهر كل شيء للزوار، ويُحسب الظهور فقط عند رؤية الإعلان فعلاً.</li>
+            <li><strong>أرسل التقارير للمعلنين</strong> من زر "تقرير CSV" (ظهور ونقرات يوماً بيوم).</li>
+        </ol>
+    </section>
+</div>
+{% endblock %}

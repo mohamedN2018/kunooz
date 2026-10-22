@@ -1,11 +1,12 @@
 # analytics/urls.py
 from django.urls import path
-from . import views
+from . import views, tracking
 
 urlpatterns = [
     # لوحات التحليلات الرئيسية
     path('dashboard/', views.advanced_analytics_dashboard, name='analytics_dashboard'),
     path('dashboard/simple/', views.simple_analytics_dashboard, name='simple_analytics'),
+    path('dashboard/advanced/', views.legacy_analytics_dashboard, name='legacy_analytics_dashboard'),
     
     # تحليلات الدول
     path('countries/', views.country_analytics, name='country_analytics'),
@@ -29,6 +30,10 @@ urlpatterns = [
     # تصدير البيانات
     path('export/<str:format>/', views.export_analytics, name='export_analytics'),
     
+    # سجل الزيارات والبيانات الحية (إشارات المتصفح /t/ping/ و /t/leave/ في kunooz/urls.py)
+    path('visitors/', views.visitors_log, name='visitors_log'),
+    path('live.json', views.live_json, name='analytics_live_json'),
+
     # الإعدادات
     path('settings/', views.analytics_settings, name='analytics_settings'),
 ]

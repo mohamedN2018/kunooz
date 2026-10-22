@@ -2,7 +2,7 @@ import logging
 from django.core.cache import cache
 from django.utils import timezone
 from django.db.models import Sum
-from .models import Advertisement
+from .models import Advertisement, AdPlacement
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
@@ -55,14 +55,16 @@ def clear_ad_cache(placement_code=None):
     """
     مسح الكاش الخاص بالإعلانات
     """
+    # الكاش الفعلي المستخدم هو ad_render_<code> (render_ad_placement). cache.keys() غير موجود
+    # في LocMemCache وكان يرمي AttributeError، وحذف 'ad_x_*' لا يدعم wildcards فلم يكن يحذف شيئاً.
     if placement_code:
-        cache.delete(f'ad_{placement_code}_*')
+        cache.delete(f'ad_render_{placement_code}')
     else:
-        # مسح كل كاش الإعلانات
-        cache.delete_many([key for key in cache.keys('ad_*')])
+        cache.delete_many([f'ad_render_{code}' for code in AdPlacement.objects.values_list('code', flat=True)])
     
     # مسح إحصائيات الكاش
     cache.delete('active_ads_count')
+    cache.delete('kz_ad_slots')
     logger.info(f"Ad cache cleared for placement: {placement_code or 'all'}")
 
 def validate_ad_image(image):

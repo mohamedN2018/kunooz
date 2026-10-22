@@ -8,6 +8,7 @@ from django.contrib.auth.forms import (
     PasswordChangeForm
 )
 from .models import *
+from .editor import PostEditorWidget
 
 # ======== وظيفة مساعدة للتنسيق التلقائي ========
 def apply_field_styling(field, field_type, label=None):
@@ -185,6 +186,13 @@ class UserUpdateForm(forms.ModelForm):
 
 # ======== فورم المنشورات ========
 class PostForm(forms.ModelForm):
+    # كان Meta و __init__ معرّفين مرتين؛ النسخة الثانية هي الفعالة فقط فأُبقيت
+    tags_input = forms.CharField(
+        required=False, label='الوسوم', max_length=500,
+        widget=forms.TextInput(attrs={'placeholder': 'مثال: برمجة، منح ممولة، بايثون'}),
+        help_text='افصل بين الوسوم بفاصلة',
+    )
+
     class Meta:
         model = Post
         fields = [
@@ -192,103 +200,7 @@ class PostForm(forms.ModelForm):
             'image', 'featured_image',
             'excerpt', 'link', 'link_delay', 'status',
             'seo_title', 'seo_description', 'seo_keywords',
-            'publish_date'
-        ]
-        
-        widgets = {
-            'title': forms.TextInput(attrs={
-                'placeholder': 'أدخل عنوان المنشور',
-                'required': True,
-                'class': 'form-control dark:bg-gray-800 dark:text-white dark:border-gray-600'
-            }),
-            'category': forms.Select(attrs={
-                'required': True,
-                'class': 'form-control dark:bg-gray-800 dark:text-white dark:border-gray-600'
-            }),
-            'content': forms.Textarea(attrs={
-                'rows': 10,
-                'id': 'post_content_field',
-                'class': 'form-control dark:bg-gray-800 dark:text-white dark:border-gray-600'
-            }),
-            'image': forms.FileInput(attrs={
-                'accept': 'image/*',
-                'class': 'form-control dark:bg-gray-800 dark:text-white dark:border-gray-600'
-            }),
-            'featured_image': forms.FileInput(attrs={
-                'accept': 'image/*',
-                'class': 'form-control dark:bg-gray-800 dark:text-white dark:border-gray-600'
-            }),
-            'excerpt': forms.Textarea(attrs={
-                'rows': 3,
-                'placeholder': 'ملخص مختصر للمنشور',
-                'maxlength': '300',
-                'class': 'form-control dark:bg-gray-800 dark:text-white dark:border-gray-600'
-            }),
-            'link': forms.URLInput(attrs={
-                'placeholder': 'https://example.com',
-                'class': 'form-control dark:bg-gray-800 dark:text-white dark:border-gray-600'
-            }),
-            'link_delay': forms.NumberInput(attrs={
-                'min': 0,
-                'max': 300,
-                'class': 'form-control dark:bg-gray-800 dark:text-white dark:border-gray-600'
-            }),
-            'status': forms.Select(attrs={
-                'class': 'form-control dark:bg-gray-800 dark:text-white dark:border-gray-600'
-            }),
-            'seo_title': forms.TextInput(attrs={
-                'placeholder': 'عنوان لمحركات البحث',
-                'class': 'form-control dark:bg-gray-800 dark:text-white dark:border-gray-600'
-            }),
-            'seo_description': forms.Textarea(attrs={
-                'rows': 2,
-                'placeholder': 'وصف لمحركات البحث',
-                'maxlength': '300',
-                'class': 'form-control dark:bg-gray-800 dark:text-white dark:border-gray-600'
-            }),
-            'seo_keywords': forms.TextInput(attrs={
-                'placeholder': 'كلمات مفتاحية مفصولة بفواصل',
-                'class': 'form-control dark:bg-gray-800 dark:text-white dark:border-gray-600'
-            }),
-            'publish_date': forms.DateTimeInput(attrs={
-                'type': 'datetime-local',
-                'class': 'form-control dark:bg-gray-800 dark:text-white dark:border-gray-600'
-            }),
-        }
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        
-        # تطبيق التنسيق التلقائي مع دعم Dark Mode
-        for field_name, field in self.fields.items():
-            field_type = type(field).__name__
-            label = field.label or field_name.replace('_', ' ').title()
-            field = apply_field_styling(field, field_type, label)
-            
-            # إضافة classes خاصة للوضع الداكن إذا لم تكن موجودة
-            if 'class' in field.widget.attrs:
-                if 'dark:' not in field.widget.attrs['class']:
-                    field.widget.attrs['class'] += ' dark:bg-gray-800 dark:text-white dark:border-gray-600'
-        
-        # إعدادات خاصة
-        if not self['category'].value():
-            self.fields['category'].empty_label = "-- اختر الفئة --"
-        
-        self.fields['title'].required = True
-        self.fields['category'].required = True
-        
-        # إضافة أخطاء مخصصة للملخص
-        self.fields['excerpt'].error_messages = {
-            'max_length': 'الملخص لا يمكن أن يتجاوز 300 حرف.'
-        }
-    class Meta:
-        model = Post
-        fields = [
-            'title', 'category', 'content', 
-            'image', 'featured_image',
-            'excerpt', 'link', 'link_delay', 'status',
-            'seo_title', 'seo_description', 'seo_keywords',
-            'publish_date'
+            'publish_date', 'deadline',
         ]
         
         widgets = {
@@ -297,10 +209,7 @@ class PostForm(forms.ModelForm):
                 'required': True
             }),
             'category': forms.Select(attrs={'required': True}),
-            'content': forms.Textarea(attrs={
-                'rows': 10,
-                'id': 'post_content_field'
-            }),
+            'content': PostEditorWidget(),
             'image': forms.FileInput(attrs={
                 'accept': 'image/*'
             }),
@@ -333,7 +242,8 @@ class PostForm(forms.ModelForm):
             }),
             'publish_date': forms.DateTimeInput(attrs={
                 'type': 'datetime-local'
-            }),
+            }, format='%Y-%m-%dT%H:%M'),
+            'deadline': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
         }
     
     def __init__(self, *args, **kwargs):
@@ -356,6 +266,29 @@ class PostForm(forms.ModelForm):
         self.fields['excerpt'].error_messages = {
             'max_length': 'الملخص لا يمكن أن يتجاوز 300 حرف.'
         }
+
+        if self.instance.pk and not self.is_bound:
+            self.initial['tags_input'] = '، '.join(self.instance.tags.values_list('name', flat=True))
+
+    def clean_tags_input(self):
+        import re
+        raw = self.cleaned_data.get('tags_input') or ''
+        names = []
+        for part in re.split(r'[,،;\n]+', raw):
+            name = ' '.join(part.split())[:50]
+            if name and name.lower() not in {n.lower() for n in names}:
+                names.append(name)
+        if len(names) > 15:
+            raise forms.ValidationError('الحد الأقصى 15 وسماً.')
+        return names
+
+    def save_tags(self, post):
+        """يُستدعى بعد حفظ المنشور (يحتاج pk)."""
+        tags = []
+        for name in self.cleaned_data.get('tags_input', []):
+            tag = Tag.objects.filter(name__iexact=name).first() or Tag.objects.create(name=name)
+            tags.append(tag)
+        post.tags.set(tags)
       
 # ======== فورم التعليقات ========
 @auto_style_form

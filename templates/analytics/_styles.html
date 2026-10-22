@@ -1,0 +1,50 @@
+<style>
+    /* ألوان اللوحة كـ tokens (فاتح/داكن). سلسلتا الرسم: دخول=أزرق، خروج=برتقالي (مُتحقق منهما لعمى الألوان) */
+    .az {
+        --az-surface: #ffffff; --az-plane: #f8fafc; --az-ink: #0f172a; --az-ink-2: #475569; --az-muted: #64748b;
+        --az-grid: #e2e8f0; --az-axis: #cbd5e1; --az-border: rgba(15, 23, 42, .08);
+        --az-s1: #2a78d6; --az-s2: #eb6834; --az-bar: #2a78d6; --az-bar-track: #eef2f7;
+        --az-good: #0ca30c; --az-good-ink: #006300; --az-bad: #d03b3b;
+        color: var(--az-ink);
+    }
+    .dark .az {
+        --az-surface: #111827; --az-plane: #0b1220; --az-ink: #f1f5f9; --az-ink-2: #cbd5e1; --az-muted: #94a3b8;
+        --az-grid: #1f2937; --az-axis: #374151; --az-border: rgba(255, 255, 255, .08);
+        --az-s1: #3987e5; --az-s2: #d95926; --az-bar: #3987e5; --az-bar-track: #1f2937;
+        --az-good: #0ca30c; --az-good-ink: #34d399; --az-bad: #e66767;
+    }
+    .az-card { background: var(--az-surface); border: 1px solid var(--az-border); border-radius: 14px; }
+    .az-title { font-weight: 700; color: var(--az-ink); }
+    .az-sub { color: var(--az-muted); font-size: .8rem; }
+    .az-tab { padding: .4rem .8rem; border-radius: .6rem; background: var(--az-surface); border: 1px solid var(--az-border); color: var(--az-ink-2); }
+    .az-tab:hover { color: var(--az-ink); }
+    .az-tab.is-active { background: #2563eb; border-color: #2563eb; color: #fff; }
+    .az-kpi-v { font-size: 1.75rem; font-weight: 700; line-height: 1.1; color: var(--az-ink); }
+    .az-kpi-l { font-size: .8rem; color: var(--az-ink-2); }
+    .az-up { color: var(--az-good-ink); } .az-down { color: var(--az-bad); }
+    .az-dot { width: .6rem; height: .6rem; border-radius: 999px; background: var(--az-good); display: inline-block; box-shadow: 0 0 0 0 rgba(12,163,12,.5); animation: azp 2s infinite; }
+    @keyframes azp { 70% { box-shadow: 0 0 0 8px rgba(12,163,12,0); } 100% { box-shadow: 0 0 0 0 rgba(12,163,12,0); } }
+    @media (prefers-reduced-motion: reduce) { .az-dot { animation: none; } }
+    .az-bars li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .15rem .75rem; font-size: .85rem; }
+    .az-bars .name { color: var(--az-ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .az-bars .val { color: var(--az-ink); font-variant-numeric: tabular-nums; }
+    .az-bars .track { grid-column: 1 / -1; height: 6px; background: var(--az-bar-track); border-radius: 4px; overflow: hidden; }
+    .az-bars .fill { height: 100%; background: var(--az-bar); border-radius: 4px; }
+    .az-table { width: 100%; font-size: .85rem; }
+    .az-table th { color: var(--az-muted); font-weight: 600; text-align: right; padding: .5rem .75rem; border-bottom: 1px solid var(--az-grid); white-space: nowrap; }
+    .az-table td { color: var(--az-ink-2); padding: .5rem .75rem; border-bottom: 1px solid var(--az-grid); white-space: nowrap; }
+    .az-table td.wrap { white-space: normal; word-break: break-all; }
+    .az-pill { display: inline-block; font-size: .7rem; padding: .1rem .5rem; border-radius: 999px; background: var(--az-bar-track); color: var(--az-ink-2); }
+    .az-pill.user { background: #dbeafe; color: #1e40af; } .dark .az-pill.user { background: #1e3a8a; color: #dbeafe; }
+    .az-legend { display: flex; gap: 1rem; font-size: .8rem; color: var(--az-ink-2); }
+    .az-legend i { display: inline-block; width: 14px; height: 2px; border-radius: 2px; vertical-align: middle; margin-left: .35rem; }
+    .az-chart { position: relative; }
+    .az-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+    .az-tip { position: absolute; pointer-events: none; background: var(--az-surface); border: 1px solid var(--az-border);
+              box-shadow: 0 8px 24px rgba(0,0,0,.12); border-radius: 10px; padding: .5rem .7rem; font-size: .8rem; min-width: 8rem; display: none; z-index: 5; }
+    .az-tip .row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+    .az-tip .row b { color: var(--az-ink); font-variant-numeric: tabular-nums; }
+    .az-tip .row span { color: var(--az-ink-2); }
+    .az-tip .row i { display: inline-block; width: 12px; height: 2px; margin-left: .35rem; vertical-align: middle; }
+    .az-scroll { overflow-x: auto; }
+</style>

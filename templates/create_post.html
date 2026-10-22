@@ -479,8 +479,29 @@
                             <i class="fas fa-calendar ml-1"></i> تاريخ النشر
                         </label>
                         {{ form.publish_date }}
-                        <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">اتركه فارغاً للنشر فورياً</p>
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">اتركه فارغاً للنشر فورياً، أو اختر تاريخاً مستقبلياً لجدولة النشر</p>
                     </div>
+
+                    <!-- الوسوم -->
+                    <div class="form-group">
+                        <label for="id_tags_input" class="form-label">
+                            <i class="fas fa-tags ml-1"></i> الوسوم
+                        </label>
+                        {{ form.tags_input }}
+                        {% if form.tags_input.errors %}<div class="error-message">{{ form.tags_input.errors }}</div>{% endif %}
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">افصل بين الوسوم بفاصلة، وتظهر للزائر كروابط لمنشورات مشابهة</p>
+                    </div>
+
+                    <!-- آخر موعد للتقديم -->
+                    <div class="form-group">
+                        <label for="id_deadline" class="form-label">
+                            <i class="fas fa-hourglass-half ml-1"></i> آخر موعد للتقديم
+                        </label>
+                        {{ form.deadline }}
+                        {% if form.deadline.errors %}<div class="error-message">{{ form.deadline.errors }}</div>{% endif %}
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">اختياري — مخصص للمنح والتدريبات</p>
+                    </div>
+
                 </div>
             </div>
 
@@ -583,6 +604,9 @@
             <button type="submit" name="save_draft" class="btn-secondary">
                 <i class="fas fa-save ml-2"></i> حفظ كمسودة
             </button>
+            <button type="submit" name="submit_review" class="btn-outline">
+                <i class="fas fa-user-check ml-2"></i> إرسال للمراجعة
+            </button>
             <button type="submit" name="publish_now" class="btn-primary">
                 <i class="fas fa-paper-plane ml-2"></i> نشر الآن
             </button>
@@ -595,31 +619,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.ckeditor.com/4.16.2/full-all/ckeditor.js"></script>
+{{ form.media }}
 <script>
-    // تهيئة CKEditor
-    CKEDITOR.replace('id_content', {
-        language: 'ar',
-        height: 400,
-        toolbarGroups: [
-            { name: 'document', groups: ['mode', 'document', 'doctools'] },
-            { name: 'clipboard', groups: ['clipboard', 'undo'] },
-            { name: 'editing', groups: ['find', 'selection', 'spellchecker'] },
-            { name: 'forms' },
-            { name: 'basicstyles', groups: ['basicstyles', 'cleanup'] },
-            { name: 'paragraph', groups: ['list', 'indent', 'blocks', 'align', 'bidi'] },
-            { name: 'links' },
-            { name: 'insert' },
-            { name: 'styles' },
-            { name: 'colors' },
-            { name: 'tools' },
-            { name: 'others' },
-            { name: 'about' }
-        ],
-        removeButtons: 'Save,NewPage,Preview,Print,Templates,Form,Checkbox,Radio,TextField,Textarea,Select,Button,ImageButton,HiddenField,Strike,Subscript,Superscript,CopyFormatting,RemoveFormat,Outdent,Indent,CreateDiv,Blockquote,JustifyLeft,JustifyCenter,JustifyRight,JustifyBlock,BidiLtr,BidiRtl,Language,Anchor,Flash,Table,HorizontalRule,Smiley,SpecialChar,PageBreak,Iframe,ShowBlocks,Maximize,About',
-        extraPlugins: 'colorbutton,font,justify',
-        contentsCss: '{% static "css/ckeditor.css" %}'
-    });
 
     // تبويبات الصفحة
     document.querySelectorAll('.tab-btn').forEach(btn => {

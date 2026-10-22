@@ -57,10 +57,10 @@ class AdvertisementForm(forms.ModelForm):
         # التحقق من صحة التواريخ
         if start_date and end_date:
             if start_date >= end_date:
-                raise ValidationError(_('End date must be after start date'))
+                raise ValidationError(_('يجب أن يكون تاريخ الانتهاء بعد تاريخ البدء'))
             
             if start_date < timezone.now():
-                raise ValidationError(_('Start date cannot be in the past'))
+                raise ValidationError(_('لا يمكن أن يكون تاريخ البدء في الماضي'))
         
         # التحقق من الحقول المطلوبة حسب نوع الإعلان
         if ad_type == 'banner' and not cleaned_data.get('image'):

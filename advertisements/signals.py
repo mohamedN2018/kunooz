@@ -13,10 +13,11 @@ def clear_ad_cache_on_save(sender, instance, **kwargs):
     """
     if instance.placement:
         # مسح كاش هذا المكان المحدد
-        cache.delete(f'ad_{instance.placement.code}_*')
+        cache.delete(f'ad_render_{instance.placement.code}')
     
     # مسح إحصائيات الكاش
     cache.delete('active_ads_count')
+    cache.delete('kz_ad_slots')
     logger.info(f'Ad cache cleared after save: {instance.title}')
 
 @receiver(post_delete, sender=Advertisement)
@@ -25,9 +26,10 @@ def clear_ad_cache_on_delete(sender, instance, **kwargs):
     مسح الكاش عند حذف إعلان
     """
     if instance.placement:
-        cache.delete(f'ad_{instance.placement.code}_*')
+        cache.delete(f'ad_render_{instance.placement.code}')
     
     cache.delete('active_ads_count')
+    cache.delete('kz_ad_slots')
     logger.info(f'Ad cache cleared after delete: {instance.title}')
 
 @receiver(post_save, sender=AdPlacement)
@@ -36,5 +38,6 @@ def clear_placement_cache(sender, instance, **kwargs):
     """
     مسح كاش الأماكن عند التغيير
     """
-    cache.delete(f'ad_{instance.code}_*')
+    cache.delete(f'ad_render_{instance.code}')
+    cache.delete('kz_ad_slots')
     logger.info(f'Placement cache cleared: {instance.code}')

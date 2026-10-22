@@ -6,6 +6,13 @@ import random
 
 register = template.Library()
 
+
+@register.simple_tag(takes_context=True)
+def ad_slot(context, code):
+    """مكان إعلاني داخل الصفحة: {% load ad_tags %}{% ad_slot 'post_bottom' %}"""
+    from advertisements.rendering import render_slot
+    return render_slot(context, code)
+
 @register.inclusion_tag('advertisements/ad_display.html', takes_context=True)
 def show_ad(context, placement_code, count=1):
     """

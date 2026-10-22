@@ -1,0 +1,5 @@
+# سكربتات تعمل داخل Linux: نهايات أسطر LF دائماً (CRLF من Windows يكسر shebang)
+*.sh text eol=lf
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf
+.dockerignore text eol=lf

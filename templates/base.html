@@ -2,34 +2,32 @@
 {% load i18n %}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" class="{% if request.COOKIES.theme == 'dark' %}dark{% elif request.COOKIES.theme == 'light' %}light{% endif %}">
-<script async src="https://www.googletagmanager.com/gtag/js?id=AW-XXXXX"></script>
-<script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'AW-XXXXX');
-</script>
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <meta name="description" content="{{ site_settings.site_description|default:'منصة تعليمية متكاملة' }}">
-    <meta name="keywords" content="دورات, مقالات, منح, كتب, تعليم, التعليم, تعلم, مهارات">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google-site-verification" content="TzQXBlOmuqIETxQ13-mxqUPvVRcUEBLyaKeAZLxjb1c" />
+    {% block meta %}
+    <meta name="description" content="{% block meta_description %}{{ url_media.site_description|default:'منصة كنوز: كورسات، مقالات، منح وتدريبات، كتب وملخصات' }}{% endblock %}">
+    <link rel="canonical" href="https://{{ request.get_host }}{{ request.path }}">
     <!-- Open Graph Meta Tags -->
-    <meta property="og:title" content="{% block og_title %}{{ site_settings.site_name }}{% endblock %}">
-    <meta property="og:description" content="{{ site_settings.site_description|default:'منصة تعليمية متكاملة' }}">
-    <meta property="og:image" content="{% block og_image %}{{ site_settings.og_image.url|default:'' }}{% endblock %}">
-    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta property="og:site_name" content="{{ url_media.site_name|default:'كنوز' }}">
+    <meta property="og:title" content="{% block og_title %}{{ url_media.site_name|default:'كنوز' }}{% endblock %}">
+    <meta property="og:description" content="{{ url_media.site_description|default:'منصة كنوز التعليمية' }}">
+    {% if url_media.site_logo %}<meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{{ url_media.site_logo.url }}{% endblock %}">{% endif %}
+    <meta property="og:url" content="https://{{ request.get_host }}{{ request.path }}">
     <meta property="og:type" content="website">
+    <meta property="og:locale" content="ar_AR">
+    {% endblock %}
+    {% block extra_head %}{% endblock %}
 
-
-    <title>{% block title %}كنوز{% endblock %}</title>
+    <title>{% block title %}{{ url_media.site_name|default:'كنوز' }}{% endblock %}</title>
 
     <link rel="icon" href="{% static 'images/favicon.ico' %}" type="image/x-icon">
+    <link rel="alternate" type="application/rss+xml" title="{{ url_media.site_name|default:'كنوز' }} — أحدث المنشورات" href="{% url 'feed' %}">
+    <meta name="theme-color" content="#16a34a">
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS مبني مسبقاً (frontend/: npm run build) بدل cdn.tailwindcss.com غير المخصص للإنتاج -->
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
     
 
     <!-- GSAP -->
@@ -40,6 +38,8 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- الخط العربي -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
@@ -619,6 +619,10 @@
 
     </style>
  
+    <link rel="stylesheet" href="{% static 'css/kz-ads.css' %}">
+    {% if url_media.ads_enabled and url_media.adsense_client %}
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ url_media.adsense_client|urlencode }}" crossorigin="anonymous"></script>
+    {% endif %}
     {% block extra_css %}{% endblock %}
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
@@ -863,22 +867,17 @@
         <div class="floating-element"></div>
     </div>
     
-{% comment %} <!-- Left Ad -->
-<div class="hidden xl:block fixed left-2 top-24 z-40">
-    <iframe src="/ads/render/left_sidebar/"
-            class="w-[160px] h-[600px] border-0"></iframe>
-</div> {% endcomment %}
+    {% load ad_tags %}
+    <!-- الإعلانات: لا يظهر شيء إلا بعد تفعيلها من إعدادات الموقع (أو معاينة المشرف ?ads_preview=1) -->
+    {% block ad_header %}<div class="container mx-auto px-4">{% ad_slot 'header_banner' %}</div>{% endblock %}
+    <div class="hidden 2xl:block fixed left-3 top-28 z-30 w-[160px]">{% ad_slot 'sidebar_left' %}</div>
 
     <!-- المحتوى الرئيسي -->
-    <main class="min-h-screen transition-colors duration-300">   
+    <main class="min-h-screen transition-colors duration-300">
         {% block content %}{% endblock %}
     </main>
-     
-{% comment %} <!-- Right Ad -->
-<div class="hidden xl:block fixed right-2 top-24 z-40">
-    <iframe src="/ads/render/right_sidebar/"
-            class="w-[160px] h-[600px] border-0"></iframe>
-</div> {% endcomment %}
+
+    {% block ad_footer %}<div class="container mx-auto px-4">{% ad_slot 'footer_banner' %}</div>{% endblock %}
 
     <!-- التذييل -->
     <footer class="bg-gray-900 dark:bg-gray-950 text-white py-12 transition-colors duration-300">
@@ -914,12 +913,15 @@
                 
                 <!-- سياسات -->
                 <div class="footer-section">
-                    <h4 class="text-xl font-bold mb-4">سياسات</h4>
+                    <h4 class="text-xl font-bold mb-4">تواصل</h4>
                     <ul class="space-y-2">
-                        <li><a href="#" class="text-gray-300 hover:text-white transition"><i class="fas fa-chevron-left ml-2"></i> سياسة الخصوصية</a></li>
-                        <li><a href="#" class="text-gray-300 hover:text-white transition"><i class="fas fa-chevron-left ml-2"></i> شروط الاستخدام</a></li>
-                        <li><a href="#" class="text-gray-300 hover:text-white transition"><i class="fas fa-chevron-left ml-2"></i> الأسئلة الشائعة</a></li>
-                        <li><a href="#" class="text-gray-300 hover:text-white transition"><i class="fas fa-chevron-left ml-2"></i> اتصل بنا</a></li>
+                        <li><a href="{% url 'search' %}" class="text-gray-300 hover:text-white transition"><i class="fas fa-chevron-left ml-2"></i> البحث</a></li>
+                        <li><a href="{% url 'about' %}" class="text-gray-300 hover:text-white transition"><i class="fas fa-chevron-left ml-2"></i> من نحن</a></li>
+                        <li><a href="{% url 'privacy' %}" class="text-gray-300 hover:text-white transition"><i class="fas fa-chevron-left ml-2"></i> سياسة الخصوصية</a></li>
+                        <li><a href="{% url 'advertise' %}" class="text-gray-300 hover:text-white transition"><i class="fas fa-chevron-left ml-2"></i> أعلن معنا</a></li>
+                        {% if url_media.contact_email %}
+                        <li><a href="mailto:{{ url_media.contact_email }}" class="text-gray-300 hover:text-white transition"><i class="fas fa-chevron-left ml-2"></i> اتصل بنا</a></li>
+                        {% endif %}
                     </ul>
                 </div>
                 
@@ -927,29 +929,34 @@
                 <div class="footer-section">
                     <h4 class="text-xl font-bold mb-4">تابعنا</h4>
                     <div class="flex space-x-4 space-x-reverse social-icons mb-4">
-                        <a href="{{ url_media.facebook_url }}" class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center hover:bg-blue-700 transition">
-                            <i class="fab fa-facebook-f"></i>
+                        {% if url_media.facebook_url %}
+                        <a href="{{ url_media.facebook_url }}" target="_blank" rel="noopener" aria-label="فيسبوك" class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center hover:bg-blue-700 transition">
+                            <i class="fab fa-facebook-f" aria-hidden="true"></i>
                         </a>
-                        <a href="{{ url_media.instagram_url }}" class="w-10 h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center hover:opacity-90 transition">
-                            <i class="fab fa-instagram"></i>
+                        {% endif %}
+                        {% if url_media.instagram_url %}
+                        <a href="{{ url_media.instagram_url }}" target="_blank" rel="noopener" aria-label="إنستغرام" class="w-10 h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center hover:opacity-90 transition">
+                            <i class="fab fa-instagram" aria-hidden="true"></i>
                         </a>
-                        <a href="{{ url_media.youtube_url }}" class="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center hover:bg-red-700 transition">
-                            <i class="fab fa-youtube"></i>
+                        {% endif %}
+                        {% if url_media.youtube_url %}
+                        <a href="{{ url_media.youtube_url }}" target="_blank" rel="noopener" aria-label="يوتيوب" class="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center hover:bg-red-700 transition">
+                            <i class="fab fa-youtube" aria-hidden="true"></i>
                         </a>
-                        <a href="{{ url_media.twitter_url }}" class="w-10 h-10 bg-blue-400 rounded-full flex items-center justify-center hover:bg-blue-500 transition">
-                            <i class="fab fa-twitter"></i>
+                        {% endif %}
+                        {% if url_media.contact_email %}
+                        <a href="mailto:{{ url_media.contact_email }}" aria-label="البريد الإلكتروني" class="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-600 transition">
+                            <i class="fas fa-envelope" aria-hidden="true"></i>
                         </a>
+                        {% endif %}
                     </div>
-                    <p class="mt-4 text-gray-300 mb-2">
-                        اشترك في نشرتنا البريدية للحصول على آخر التحديثات
-                    </p>
-                    <div class="mt-2 flex newsletter-form">
-                        <input type="email" placeholder="بريدك الإلكتروني" 
-                               class="flex-grow px-3 py-2 rounded-r-lg border border-gray-700 bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 newsletter-input">
-                        <button class="bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-2 rounded-l-lg hover:opacity-90 transition newsletter-button">
-                            اشتراك
-                        </button>
-                    </div>
+                    {# نموذج النشرة البريدية أُزيل: لم يكن له backend وكان الزر لا يفعل شيئاً #}
+                    <form method="get" action="{% url 'search' %}" class="mt-4 flex" role="search">
+                        <label for="footer-search" class="sr-only">ابحث في كنوز</label>
+                        <input id="footer-search" type="search" name="q" placeholder="ابحث في كنوز..."
+                               class="flex-grow px-3 py-2 rounded-r-lg border border-gray-700 bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button type="submit" class="bg-blue-600 px-4 py-2 rounded-l-lg hover:bg-blue-700 transition">بحث</button>
+                    </form>
                 </div>
             </div>
             {% comment %} <iframe src="/ads/render/header/" class="w-full" style="border:none;width:100%;height:90px;"></iframe> {% endcomment %}
@@ -964,32 +971,6 @@
     
     <!-- ملفات JavaScript -->
     <script>
-        // إعدادات Tailwind CSS
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#eff6ff',
-                            100: '#dbeafe',
-                            200: '#bfdbfe',
-                            300: '#93c5fd',
-                            400: '#60a5fa',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            700: '#1d4ed8',
-                            800: '#1e40af',
-                            900: '#1e3a8a',
-                        }
-                    },
-                    fontFamily: {
-                        'cairo': ['Cairo', 'sans-serif'],
-                    }
-                }
-            }
-        }
-        
         // Mobile Menu Functionality
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const closeMobileMenu = document.getElementById('closeMobileMenu');
@@ -1098,13 +1079,13 @@
             if (isDark) {
                 htmlElement.classList.add('dark');
                 darkModeToggle.innerHTML = '<i class="fas fa-sun"></i><span class="tooltip">الوضع الفاتح</span>';
-                modeIndicator.textContent = 'داكن';
+                if (modeIndicator) modeIndicator.textContent = 'داكن';
                 localStorage.setItem('theme', 'dark');
                 document.cookie = "theme=dark; path=/; max-age=31536000";
             } else {
                 htmlElement.classList.remove('dark');
                 darkModeToggle.innerHTML = '<i class="fas fa-moon"></i><span class="tooltip">الوضع الداكن</span>';
-                modeIndicator.textContent = 'فاتح';
+                if (modeIndicator) modeIndicator.textContent = 'فاتح';
                 localStorage.setItem('theme', 'light');
                 document.cookie = "theme=light; path=/; max-age=31536000";
             }
@@ -1157,6 +1138,7 @@
 
         // Update system badge
         function updateSystemBadge() {
+            if (!systemBadge) return;
             const hasStoredTheme = localStorage.getItem('theme') || document.cookie.includes('theme=');
             
             if (hasStoredTheme) {
@@ -1237,48 +1219,7 @@
         });
     </script>
 
-    <!-- Search Stats (When typing) -->
-    <script>
-        const searchInput = document.getElementById('search-input');
-        const suggestionsBox = document.getElementById('search-suggestions');
-
-        searchInput.addEventListener('input', function() {
-            const term = this.value.trim();
-            if (!term) {
-                suggestionsBox.innerHTML = '';
-                suggestionsBox.classList.add('hidden');
-                return;
-            }
-
-            fetch(`/autocomplete_search/?term=${encodeURIComponent(term)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.length === 0) {
-                        suggestionsBox.innerHTML = '<div class="px-4 py-2 text-gray-500">لا توجد نتائج</div>';
-                    } else {
-                        suggestionsBox.innerHTML = data.map(item => `
-                            <a href="${item.url}" 
-                            class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition">
-                                ${item.title}
-                            </a>
-                        `).join('');
-                    }
-                    suggestionsBox.classList.remove('hidden');
-                })
-                .catch(err => {
-                    console.error(err);
-                    suggestionsBox.classList.add('hidden');
-                });
-        });
-
-        // إخفاء الاقتراحات إذا ضغط المستخدم خارج الـ input
-        document.addEventListener('click', function(e) {
-            if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
-                suggestionsBox.classList.add('hidden');
-            }
-        });
-
-    </script>
+    {# نسخة مكررة من سكربت البحث أُزيلت؛ السكربت الموحد بالأسفل #}
 
 
  <!-- Search JavaScript -->
@@ -1295,6 +1236,12 @@
             const recentSearchesDiv = document.getElementById('recent-searches');
             const recentSearchesList = document.getElementById('recent-searches-list');
 
+            // صندوق البحث المتقدم موجود في الصفحة الرئيسية فقط
+            if (!searchInput || !searchForm || !searchSuggestions) return;
+
+            // منع حقن HTML من العناوين أو عمليات البحث المحفوظة
+            const esc = (v) => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
             let searchTimeout;
             let isSearching = false;
 
@@ -1309,18 +1256,20 @@
                         const item = document.createElement('div');
                         item.className = 'flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group';
                         item.innerHTML = `
-                            <button onclick="setSearchTerm('${term}')" class="flex-1 text-left">
+                            <button type="button" data-term="${esc(term)}" class="recent-term flex-1 text-left">
                                 <div class="flex items-center">
                                     <i class="fas fa-history text-gray-400 dark:text-gray-500 ml-2 text-sm"></i>
                                     <span class="text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                        ${term}
+                                        ${esc(term)}
                                     </span>
                                 </div>
                             </button>
-                            <button onclick="removeRecentSearch('${term}')" class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
+                            <button type="button" data-remove="${esc(term)}" aria-label="حذف" class="recent-remove text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
                                 <i class="fas fa-times text-sm"></i>
                             </button>
                         `;
+                        item.querySelector('.recent-term').addEventListener('click', () => setSearchTerm(term));
+                        item.querySelector('.recent-remove').addEventListener('click', () => removeRecentSearch(term));
                         recentSearchesList.appendChild(item);
                     });
                 } else {
@@ -1416,10 +1365,10 @@
                             <div class="flex-1">
                                 <h5 class="font-medium text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 
                                         transition-colors truncate">
-                                    ${item.title}
+                                    ${esc(item.title)}
                                 </h5>
                                 <p class="text-sm text-gray-500 dark:text-gray-400 truncate">
-                                    ${item.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                                    ${esc(decodeURIComponent(item.url).replace(/^https?:\/\//, '').replace(/\/$/, ''))}
                                 </p>
                             </div>
                             <i class="fas fa-chevron-left text-gray-300 dark:text-gray-600 
@@ -1996,37 +1945,24 @@
 
     </script>
     
-    {% comment %} # Open Graph Meta Tags {% endcomment %}
+    {# بيانات المنظمة الحقيقية (كانت placeholder: My Django Website / yoursite.com). بيانات Article موجودة في post_detail.html #}
     <script type="application/ld+json">
         {
         "@context": "https://schema.org",
         "@type": "Organization",
-        "name": "My Django Website",
-        "url": "https://yoursite.com",
-        "logo": "https://yoursite.com/static/logo.png"
-        }
-    </script>
-    <script type="application/ld+json">
-        {
-        "@context": "https://schema.org",
-        "@type": "Article",
-        "headline": "{{ post.display_title }}",
-        "image": "{{ post.get_main_image.url }}",
-        "author": {
-        "@type": "Person",
-        "name": "{{ post.author }}"
-        },
-        "datePublished": "{{ post.publish_date|date:'Y-m-d' }}",
-        "dateModified": "{{ post.updated_at|date:'Y-m-d' }}",
-        "mainEntityOfPage": {
-        "@type": "WebPage",
-        "@id": "{{ request.build_absolute_uri }}"
-        }
+        "name": "{{ url_media.site_name|default:'كنوز'|escapejs }}",
+        "url": "https://{{ request.get_host }}/",
+        "logo": "https://{{ request.get_host }}{% if url_media.site_logo %}{{ url_media.site_logo.url }}{% else %}{% static 'images/logo.png' %}{% endif %}"
         }
     </script>
 
 
     <script src="{% static 'js/clean-paste.js' %}"></script>
+    {% if not user.is_staff %}<script src="{% static 'js/kz-track.js' %}" defer></script>{% endif %}
+    <script src="{% static 'js/kz-ads.js' %}" defer></script>
+    {% if user.is_staff and request.GET.ads_preview %}
+    <div class="kz-ads-preview-bar" role="status">معاينة الأماكن الإعلانية (تظهر لك فقط)<a href="{{ request.path }}">إخفاء</a><a href="{% url 'advertisements:ads_report' %}">تقرير الإعلانات</a></div>
+    {% endif %}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lazysizes/5.3.2/lazysizes.min.js" async></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 

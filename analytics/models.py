@@ -61,6 +61,15 @@ class VisitorSession(models.Model):
     
     # بيانات إضافية
     metadata = models.JSONField(default=dict, blank=True, verbose_name="بيانات إضافية")
+
+    # تتبع الدخول والخروج
+    visitor_id = models.UUIDField(null=True, blank=True, db_index=True, verbose_name="معرف الزائر",
+                                  help_text="ثابت لنفس المتصفح (كوكي سنة) لحساب الزوار الفريدين والعائدين")
+    is_returning = models.BooleanField(default=False, verbose_name="زائر عائد")
+    last_seen = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name="آخر نشاط")
+    entry_source = models.CharField(max_length=20, blank=True, default='', verbose_name="مصدر الدخول",
+                                    help_text="direct / search / social / referral")
+    exit_page = models.URLField(blank=True, null=True, verbose_name="صفحة الخروج")
     
     class Meta:
         verbose_name = "جلسة زائر"

@@ -1,0 +1,1 @@
+Jodit 4.15.13 (MIT) — https://github.com/xdan/jodit — es2021/jodit.fat.min.*

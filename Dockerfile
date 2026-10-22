@@ -1,40 +1,39 @@
-# pull official base image
+# Kunooz — صورة الإنتاج (Dokploy / docker compose)
 FROM python:3.11.3-alpine
 
-# set work directory
 WORKDIR /usr/src/app
 
-# install dependencies for psycopg2 and Django
-RUN apk update && apk add --no-cache \
-    build-base \
-    gcc \
-    python3-dev \
-    musl-dev \
-    libffi-dev \
-    openssl-dev \
-    tzdata \
-    postgresql-dev
+ENV TZ=Africa/Cairo \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# set timezone
-ENV TZ=Africa/Cairo
+# مكتبات psycopg2 و Pillow، و pg_isready لانتظار قاعدة البيانات
+RUN apk add --no-cache \
+    build-base gcc python3-dev musl-dev libffi-dev openssl-dev \
+    tzdata postgresql-dev postgresql-client \
+    jpeg-dev zlib-dev libwebp-dev
 
-# upgrade pip & install pipenv
-RUN pip3 install --upgrade pip
-RUN pip3 install pipenv
+RUN pip3 install --upgrade pip pipenv
 
-# Copy files first Pipfile and Pipfile.lock
+# المتطلبات أولاً (طبقة مخزنة؛ لا يُعاد التثبيت إلا عند تغيّر Pipfile.lock)
+COPY Pipfile Pipfile.lock ./
+RUN pipenv requirements > /tmp/requirements.txt \
+    && pip3 install -r /tmp/requirements.txt
+
 COPY . .
 
-# After files copied
-RUN pipenv requirements > requirements.txt
-RUN pip3 install -r requirements.txt
+# ملفات static تُجمع وقت البناء وتُخدم عبر WhiteNoise.
+# الصور الموجودة في git تُحفظ في media-seed لأن media/ يُغطى بالـ volume الدائم وقت التشغيل.
+RUN MY_SECRET_KEY=build-only-not-a-secret LOCAL=True DEBUG=False \
+        python manage.py collectstatic --noinput --verbosity 0 \
+    && cp -a media media-seed \
+    && sed -i 's/\r$//' scripts/*.sh \
+    && chmod +x scripts/*.sh \
+    && mkdir -p /s3files
 
-# create static dir
-RUN mkdir -p /usr/src/app/static/ && chmod 755 /usr/src/app/static/
-RUN mkdir -p /s3files
-
-# expose port
 EXPOSE 80
 
-# start server with gunicorn
+ENTRYPOINT ["/usr/src/app/scripts/entrypoint.sh"]
 CMD ["gunicorn", "--chdir", "/usr/src/app", "--access-logfile", "-", "--error-logfile", "-", "--bind", "0.0.0.0:80", "kunooz.wsgi:application"]

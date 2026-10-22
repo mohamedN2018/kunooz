@@ -6,6 +6,7 @@ from django import forms
 from django.contrib import messages
 from django.utils import timezone
 from .models import *
+from .editor import PostEditorWidget
 
 
 class PostAdminForm(forms.ModelForm):
@@ -13,6 +14,7 @@ class PostAdminForm(forms.ModelForm):
         model = Post
         fields = '__all__'
         widgets = {
+            'content': PostEditorWidget(),
             'excerpt': forms.Textarea(attrs={'rows': 3}),
             'seo_description': forms.Textarea(attrs={'rows': 3}),
         }
@@ -30,7 +32,8 @@ class PostAdmin(admin.ModelAdmin):
         'publish_date',
         'views',
     )
-    list_filter = ('status', 'category', 'publish_date', 'created_at')
+    list_filter = ('status', 'category', 'tags', 'publish_date', 'created_at')
+    filter_horizontal = ('tags',)
     search_fields = ('title', 'content', 'excerpt')
     prepopulated_fields = {'slug': ('title',)}
     date_hierarchy = 'publish_date'
@@ -59,6 +62,8 @@ class PostAdmin(admin.ModelAdmin):
                 'content',
                 'link',
                 'link_delay',
+                'tags',
+                'deadline',
             )
         }),
         (_('الصور'), {
@@ -88,13 +93,11 @@ class PostAdmin(admin.ModelAdmin):
     
     
     def get_thumbnail(self, obj):
-        if obj.thumbnail:
+        # card_image يتجاهل المصغرات المحفوظة بمسار Windows مطلق (كانت تظهر مكسورة)
+        image = obj.card_image
+        if image:
             return format_html(
-                f'<img src="{obj.thumbnail.url}" style="width: 50px; height: 50px; object-fit: cover;" />'
-            )
-        elif obj.featured_image:
-            return format_html(
-                f'<img src="{obj.featured_image.url}" style="width: 50px; height: 50px; object-fit: cover;" />'
+                '<img src="{}" style="width: 50px; height: 50px; object-fit: cover;" />', image.url
             )
         return '-'
     get_thumbnail.short_description = _('صورة مصغرة')
@@ -142,6 +145,32 @@ class PostAdmin(admin.ModelAdmin):
         
         self.message_user(request, f'تم نسخ {queryset.count()} منشور')
     duplicate_post.short_description = _('نسخ المنشورات المحددة')
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'posts_count')
+    search_fields = ('name',)
+
+    def get_queryset(self, request):
+        from django.db.models import Count
+        return super().get_queryset(request).annotate(_posts=Count('posts'))
+
+    def posts_count(self, obj):
+        return obj._posts
+    posts_count.short_description = _('عدد المنشورات')
+    posts_count.admin_order_field = '_posts'
+
+
+@admin.register(PostRevision)
+class PostRevisionAdmin(admin.ModelAdmin):
+    list_display = ('post', 'title', 'status', 'edited_by', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('title', 'post__title')
+    readonly_fields = ('post', 'title', 'excerpt', 'content', 'status', 'edited_by', 'created_at')
+
+    def has_add_permission(self, request):
+        return False
 
 
 @admin.register(Category)
@@ -194,6 +223,18 @@ class CommentAdmin(admin.ModelAdmin):
 
 @admin.register(SiteSettings)
 class SiteSettingsAdmin(admin.ModelAdmin):
+    fieldsets = (
+        ('الموقع', {'fields': ('site_name', 'site_description', 'site_logo', 'contact_email', 'maintenance_mode')}),
+        ('التعليقات والمحتوى', {'fields': ('allow_comments', 'require_comment_approval', 'default_link_delay')}),
+        ('الإعلانات', {
+            'fields': ('ads_enabled', 'adsense_client', 'ads_txt'),
+            'description': 'قبل التفعيل: راجع تقرير الجاهزية في /ads/report/ وعاين الأماكن بفتح أي صفحة مع ?ads_preview=1',
+        }),
+        ('الصفحات القانونية', {'fields': ('about_content', 'privacy_content'),
+                               'description': 'اتركها فارغة لاستخدام النص الافتراضي الذي يصف ما يجمعه الموقع فعلاً.'}),
+        ('وسائل التواصل', {'fields': ('facebook_url', 'instagram_url', 'youtube_url')}),
+    )
+
     def has_add_permission(self, request):
         # منع إضافة أكثر من سجل واحد
         return not SiteSettings.objects.exists()
@@ -234,6 +275,6 @@ class UserProfileAdmin(admin.ModelAdmin):
 admin.site.register(Comment, CommentAdmin)
 
 # تحسين واجهة الإدارة
-admin.site.site_header = 'إدارة المدونة'
-admin.site.site_title = 'نظام إدارة المدونة'
+admin.site.site_header = 'إدارة كنوز'
+admin.site.site_title = 'إدارة كنوز'
 admin.site.index_title = 'مرحبا بك في لوحة التحكم'

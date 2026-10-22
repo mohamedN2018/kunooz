@@ -553,8 +553,8 @@
                                 <tr class="table-row hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                                     <td>
                                         <div class="flex items-center gap-3">
-                                            {% if post.thumbnail or post.featured_image %}
-                                            <img src="{% if post.thumbnail %}{{ post.thumbnail.url }}{% else %}{{ post.featured_image.url }}{% endif %}" 
+                                            {% if post.card_image %}
+                                            <img src="{{ post.card_image.url }}" 
                                                 alt="{{ post.title }}" 
                                                 class="w-12 h-12 object-cover rounded-lg">
                                             {% else %}

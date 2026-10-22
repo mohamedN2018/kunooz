@@ -1,0 +1,45 @@
+{% extends "pages/_page.html" %}
+{% block title %}أعلن معنا - {{ site.site_name|default:"كنوز" }}{% endblock %}
+{% block meta_description %}أعلن على {{ site.site_name|default:"كنوز" }} ووصل إلى جمهور عربي مهتم بالتعلم والكورسات والمنح.{% endblock %}
+{% block page_title %}أعلن معنا{% endblock %}
+{% block page_lead %}<p class="mt-2 opacity-90">وصّل رسالتك لجمهور عربي يبحث عن التعلم والكورسات والمنح والكتب.</p>{% endblock %}
+{% block page_body %}
+    <h2>جمهورنا (آخر 30 يوماً)</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 not-prose">
+        <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center"><div class="text-2xl font-bold text-gray-900 dark:text-white">{{ monthly_unique }}</div><div class="text-sm">زائر فريد</div></div>
+        <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center"><div class="text-2xl font-bold text-gray-900 dark:text-white">{{ monthly_visits }}</div><div class="text-sm">زيارة</div></div>
+        <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center"><div class="text-2xl font-bold text-gray-900 dark:text-white">{{ monthly_pageviews }}</div><div class="text-sm">مشاهدة صفحة</div></div>
+        <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center"><div class="text-2xl font-bold text-gray-900 dark:text-white">{{ posts_count }}</div><div class="text-sm">منشور</div></div>
+    </div>
+    <p class="text-sm">الأرقام محسوبة تلقائياً من إحصائيات الموقع (بدون البوتات).</p>
+
+    <h2>الأماكن المتاحة</h2>
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg">
+            <thead class="bg-gray-50 dark:bg-gray-800"><tr><th scope="col" class="p-2 text-right">المكان</th><th scope="col" class="p-2 text-right">المقاس</th><th scope="col" class="p-2 text-right">الوصف</th></tr></thead>
+            <tbody>
+                {% for p in placements %}
+                <tr class="border-t border-gray-200 dark:border-gray-700"><td class="p-2 font-medium">{{ p.name }}</td><td class="p-2 whitespace-nowrap" dir="ltr">{{ p.width }}×{{ p.height }}</td><td class="p-2">{{ p.description }}</td></tr>
+                {% empty %}
+                <tr><td colspan="3" class="p-4 text-center">سيتم إعلان الأماكن قريباً.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <h2>أنواع الإعلانات</h2>
+    <ul>
+        <li>بانر صورة (JPG/PNG/WEBP) بالمقاس المناسب للمكان.</li>
+        <li>إعلان نصي: عنوان وسطرين ورابط.</li>
+        <li>فيديو من YouTube.</li>
+        <li>نوفر للمعلن تقريراً بعدد مرات الظهور والنقرات يوماً بيوم.</li>
+    </ul>
+
+    <h2>سياسة الإعلانات</h2>
+    <p>نقبل الإعلانات المناسبة لجمهور تعليمي. كل إعلان موسوم بكلمة "إعلان"، ونرفض المحتوى المضلل أو غير اللائق.</p>
+
+    {% if site.contact_email %}
+    <h2>للحجز</h2>
+    <p>راسلنا على <a href="mailto:{{ site.contact_email }}?subject={{ 'طلب إعلان'|urlencode }}">{{ site.contact_email }}</a> مع المكان المطلوب ومدة الحملة.</p>
+    {% endif %}
+{% endblock %}

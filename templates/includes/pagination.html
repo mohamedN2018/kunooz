@@ -1,0 +1,13 @@
+{% if page_obj.has_other_pages %}
+<nav class="flex justify-center items-center gap-2 mt-6" aria-label="التنقل بين الصفحات">
+    {% if page_obj.has_previous %}
+    <a href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+       class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700" rel="prev">السابق</a>
+    {% endif %}
+    <span class="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300" aria-current="page">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+       class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700" rel="next">التالي</a>
+    {% endif %}
+</nav>
+{% endif %}

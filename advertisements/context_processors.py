@@ -17,7 +17,7 @@ def ad_context(request):
     context = {}
     
     # إضافة تعداد الإعلانات النشطة (مخبأ لأداء أفضل)
-    if request.user.is_authenticated and request.user.user_type in ['admin', 'editor']:
+    if request.user.is_authenticated and request.user.is_staff:
         cache_key = 'active_ads_count'
         active_count = cache.get(cache_key)
         

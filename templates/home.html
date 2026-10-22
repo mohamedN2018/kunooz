@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
 
 {% load static %}
+{% load ad_tags %}
 
 {% block title %}الرئيسية - كنوز{% endblock %}
+{% block extra_head %}{% load seo_tags %}{% website_jsonld url_media %}{% endblock %}
 
 {% block extra_css %}
     <!-- earth CSS مخصص -->
@@ -103,10 +105,8 @@
 {% block content %}
     <section class="relative hero-gradient text-white min-h-[60vh] flex items-center dark:bg-gray-900 dark:text-gray-100 section-animate animate-card transition-colors duration-300">
             <div class="absolute inset-0 overflow-hidden">
-                {% if hero_sections and hero_sections.background_image %}
-                    <img id="hero-bg" src="{{ hero_sections.background_image.url }}" class="w-full h-full object-cover opacity-50 scale-100 transition-transform duration-300 ease-out" alt="Hero Background">
-                {% else %}
-                    <img id="hero-bg" src="{% static 'images/back-hero2.png' %}" class="w-full h-full object-cover opacity-50 scale-100 transition-transform duration-300 ease-out" alt="Hero Background">
+                {% if hero_bg_available %}
+                    <img id="hero-bg" src="{{ hero_sections.background_image.url }}" class="w-full h-full object-cover opacity-50 scale-100 transition-transform duration-300 ease-out" alt="" fetchpriority="high">
                 {% endif %}
                 </div>
             <!-- Dark overlay for better readability -->
@@ -274,7 +274,7 @@
                                         </div>
                                         <div class="flex-1">
                                             <p class="font-medium text-gray-800 dark:text-gray-200">الكورسات</p>
-                                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ courses_posts.count }} كورس</p>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ section_counts.courses }} كورس</p>
                                         </div>
                                         <i class="fas fa-chevron-left text-gray-400 dark:text-gray-500 
                                                 group-hover:translate-x-1 transition-transform"></i>
@@ -291,7 +291,7 @@
                                         </div>
                                         <div class="flex-1">
                                             <p class="font-medium text-gray-800 dark:text-gray-200">الكتب</p>
-                                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ books_posts.count }} كتاب</p>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ section_counts.books }} كتاب</p>
                                         </div>
                                         <i class="fas fa-chevron-left text-gray-400 dark:text-gray-500 
                                                 group-hover:translate-x-1 transition-transform"></i>
@@ -325,7 +325,7 @@
                     <div class="absolute inset-0 bg-black/60 dark:bg-gray-900/70 group-hover:bg-black/50 dark:group-hover:bg-gray-800/60 transition-colors duration-500"></div>
                     <div class="relative z-10">
                         <i class="fas fa-video text-4xl mb-4 text-blue-400 group-hover:text-blue-300 transition-colors duration-300"></i>
-                        <h3 class="text-4xl font-extrabold group-hover:text-white transition-colors duration-300">{{ courses_posts.count }}+</h3>
+                        <h3 class="text-4xl font-extrabold group-hover:text-white transition-colors duration-300">{{ section_counts.courses }}</h3>
                         <p class="opacity-90 mt-1 group-hover:text-gray-200 transition-colors duration-300">كورس تعليمي</p>
                     </div>
                     <!-- Glow -->
@@ -334,13 +334,13 @@
 
                 <!-- مقالات -->
                 <div class="relative overflow-hidden rounded-2xl text-white p-6 text-center shadow-xl group transform transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl dark-mode-transition">
-                    <img src="{% static 'images/articles-bg.jpg' %}" 
+                    <img src="{% static 'images/courses-bg.jpg' %}" 
                         class="absolute inset-0 w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-700"
                         alt="">
                     <div class="absolute inset-0 bg-black/60 dark:bg-gray-900/70 group-hover:bg-black/50 dark:group-hover:bg-gray-800/60 transition-colors duration-500"></div>
                     <div class="relative z-10">
                         <i class="fas fa-newspaper text-4xl mb-4 text-green-400 group-hover:text-green-300 transition-colors duration-300"></i>
-                        <h3 class="text-4xl font-extrabold group-hover:text-white transition-colors duration-300">{{ articles_posts.count }}+</h3>
+                        <h3 class="text-4xl font-extrabold group-hover:text-white transition-colors duration-300">{{ section_counts.articles }}</h3>
                         <p class="opacity-90 mt-1 group-hover:text-gray-200 transition-colors duration-300">مقال تعليمي</p>
                     </div>
                     <div class="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-20 bg-gradient-to-tr from-green-500 via-green-300 to-white transition-opacity duration-500 mix-blend-screen pointer-events-none"></div>
@@ -348,13 +348,13 @@
 
                 <!-- منح -->
                 <div class="relative overflow-hidden rounded-2xl text-white p-6 text-center shadow-xl group transform transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl dark-mode-transition">
-                    <img src="{% static 'images/grants-bg.jpg' %}" 
+                    <img src="{% static 'images/books-bg.jpg' %}" 
                         class="absolute inset-0 w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-700"
                         alt="">
                     <div class="absolute inset-0 bg-black/60 dark:bg-gray-900/70 group-hover:bg-black/50 dark:group-hover:bg-gray-800/60 transition-colors duration-500"></div>
                     <div class="relative z-10">
                         <i class="fas fa-award text-4xl mb-4 text-yellow-400 group-hover:text-yellow-300 transition-colors duration-300"></i>
-                        <h3 class="text-4xl font-extrabold group-hover:text-white transition-colors duration-300">{{ grants_posts.count }}+</h3>
+                        <h3 class="text-4xl font-extrabold group-hover:text-white transition-colors duration-300">{{ section_counts.grants }}</h3>
                         <p class="opacity-90 mt-1 group-hover:text-gray-200 transition-colors duration-300">منحة تدريبية</p>
                     </div>
                     <div class="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-20 bg-gradient-to-tr from-yellow-500 via-yellow-300 to-white transition-opacity duration-500 mix-blend-screen pointer-events-none"></div>
@@ -368,7 +368,7 @@
                     <div class="absolute inset-0 bg-black/60 dark:bg-gray-900/70 group-hover:bg-black/50 dark:group-hover:bg-gray-800/60 transition-colors duration-500"></div>
                     <div class="relative z-10">
                         <i class="fas fa-book text-4xl mb-4 text-pink-400 group-hover:text-pink-300 transition-colors duration-300"></i>
-                        <h3 class="text-4xl font-extrabold group-hover:text-white transition-colors duration-300">{{ books_posts.count }}+</h3>
+                        <h3 class="text-4xl font-extrabold group-hover:text-white transition-colors duration-300">{{ section_counts.books }}</h3>
                         <p class="opacity-90 mt-1 group-hover:text-gray-200 transition-colors duration-300">كتاب وملخص</p>
                     </div>
                     <div class="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-20 bg-gradient-to-tr from-pink-500 via-pink-300 to-white transition-opacity duration-500 mix-blend-screen pointer-events-none"></div>
@@ -377,6 +377,8 @@
             </div>
         </div>
     </section>
+<div class="container mx-auto px-4">{% ad_slot 'home_middle' %}</div>
+
 
 
     <section class="relative min-h-screen flex items-center justify-center overflow-hidden bg-white dark:bg-gradient-to-b dark:from-gray-900 dark:to-gray-800 section-animate animate-card transition-colors duration-300">
@@ -429,7 +431,7 @@
                     <h3 class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2 transition-colors duration-300">الكورسات</h3>
                     <p class="text-gray-600 dark:text-gray-300 mb-4 transition-colors duration-300">دروس تعليمية متخصصة تغطي مختلف المجالات</p>
                     <div class="text-blue-600 dark:text-blue-400 font-medium transition-colors duration-300">
-                        <span>استعرض {{ courses_posts.count }} كورس</span>
+                        <span>استعرض {{ section_counts.courses }} كورس</span>
                         <i class="fas fa-arrow-left mr-2"></i>
                     </div>
                 </a>
@@ -442,7 +444,7 @@
                     <h3 class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2 transition-colors duration-300">المقالات</h3>
                     <p class="text-gray-600 dark:text-gray-300 mb-4 transition-colors duration-300">مقالات تعليمية ومواضيع متنوعة</p>
                     <div class="text-green-600 dark:text-green-400 font-medium transition-colors duration-300">
-                        <span>استعرض {{ articles_posts.count }} مقال</span>
+                        <span>استعرض {{ section_counts.articles }} مقال</span>
                         <i class="fas fa-arrow-left mr-2"></i>
                     </div>
                 </a>
@@ -455,7 +457,7 @@
                     <h3 class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2 transition-colors duration-300">المنح والتدريبات</h3>
                     <p class="text-gray-600 dark:text-gray-300 mb-4 transition-colors duration-300">فرص منح دراسية وتدريبات عملية</p>
                     <div class="text-yellow-600 dark:text-yellow-400 font-medium transition-colors duration-300">
-                        <span>استعرض {{ grants_posts.count }} فرصة</span>
+                        <span>استعرض {{ section_counts.grants }} فرصة</span>
                         <i class="fas fa-arrow-left mr-2"></i>
                     </div>
                 </a>
@@ -468,7 +470,7 @@
                     <h3 class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2 transition-colors duration-300">الكتب والملخصات</h3>
                     <p class="text-gray-600 dark:text-gray-300 mb-4 transition-colors duration-300">كتب وملخصات تعليمية متنوعة</p>
                     <div class="text-purple-600 dark:text-purple-400 font-medium transition-colors duration-300">
-                        <span>استعرض {{ books_posts.count }} كتاب</span>
+                        <span>استعرض {{ section_counts.books }} كتاب</span>
                         <i class="fas fa-arrow-left mr-2"></i>
                     </div>
                 </a>
@@ -497,8 +499,8 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {% for post in courses_posts|slice:":3" %}
                     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden card-hover animate-card dark-mode-transition">
-                        {% if post.image %}
-                        <img src="{{ post.image.url }}" alt="{{ post.title }}" class="w-full h-48 object-cover">
+                        {% if post.get_main_image %}
+                        <img src="{{ post.card_image.url }}" alt="{{ post.title }}" loading="lazy" decoding="async" class="w-full h-48 object-cover">
                         {% else %}
                         <div class="w-full h-48 bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center">
                             <i class="fas fa-video text-white text-4xl"></i>
@@ -539,8 +541,8 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {% for post in articles_posts|slice:":3" %}
                     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden card-hover animate-card dark-mode-transition">
-                        {% if post.image %}
-                        <img src="{{ post.image.url }}" alt="{{ post.title }}" class="w-full h-48 object-cover">
+                        {% if post.get_main_image %}
+                        <img src="{{ post.card_image.url }}" alt="{{ post.title }}" loading="lazy" decoding="async" class="w-full h-48 object-cover">
                         {% else %}
                         <div class="w-full h-48 bg-gradient-to-r from-green-400 to-green-600 flex items-center justify-center">
                             <i class="fas fa-newspaper text-white text-4xl"></i>
@@ -581,8 +583,8 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {% for post in grants_posts|slice:":3" %}
                     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden card-hover animate-card dark-mode-transition">
-                        {% if post.image %}
-                        <img src="{{ post.image.url }}" alt="{{ post.title }}" class="w-full h-48 object-cover">
+                        {% if post.get_main_image %}
+                        <img src="{{ post.card_image.url }}" alt="{{ post.title }}" loading="lazy" decoding="async" class="w-full h-48 object-cover">
                         {% else %}
                         <div class="w-full h-48 bg-gradient-to-r from-yellow-400 to-yellow-600 flex items-center justify-center">
                             <i class="fas fa-award text-white text-4xl"></i>
@@ -623,8 +625,8 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {% for post in books_posts|slice:":3" %}
                     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden card-hover animate-card dark-mode-transition">
-                        {% if post.image %}
-                        <img src="{{ post.image.url }}" alt="{{ post.title }}" class="w-full h-48 object-cover">
+                        {% if post.get_main_image %}
+                        <img src="{{ post.card_image.url }}" alt="{{ post.title }}" loading="lazy" decoding="async" class="w-full h-48 object-cover">
                         {% else %}
                         <div class="w-full h-48 bg-gradient-to-r from-teal-400 to-teal-600 flex items-center justify-center">
                             <i class="fas fa-book text-white text-4xl"></i>

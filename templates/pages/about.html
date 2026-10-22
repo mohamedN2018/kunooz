@@ -1,0 +1,21 @@
+{% extends "pages/_page.html" %}
+{% block title %}من نحن - {{ site.site_name|default:"كنوز" }}{% endblock %}
+{% block meta_description %}تعرّف على {{ site.site_name|default:"كنوز" }}: {{ site.site_description|default:"منصة تعليمية عربية"|striptags|truncatechars:140 }}{% endblock %}
+{% block page_title %}من نحن{% endblock %}
+{% block page_lead %}<p class="mt-2 opacity-90">{{ site.site_description|default:"منصة تعليمية عربية" }}</p>{% endblock %}
+{% block page_body %}
+    {% if site.about_content %}
+        {{ site.about_content|linebreaks }}
+    {% else %}
+        <p><strong>{{ site.site_name|default:"كنوز" }}</strong> منصة عربية تجمع في مكان واحد الكورسات والمقالات وفرص المنح والتدريب والكتب والملخصات، لتسهيل الوصول إلى المعرفة المفيدة باللغة العربية.</p>
+        <h2>ماذا ستجد هنا</h2>
+        <ul>
+            {% for label, n in counts %}<li>{{ label }}: {{ n }} منشور</li>{% endfor %}
+        </ul>
+        <p>نراجع المحتوى قبل نشره، ونحدّث فرص المنح بمواعيد التقديم الخاصة بها.</p>
+    {% endif %}
+    {% if site.contact_email %}
+    <h2>تواصل معنا</h2>
+    <p>للاقتراحات أو التصحيحات أو التعاون: <a href="mailto:{{ site.contact_email }}">{{ site.contact_email }}</a></p>
+    {% endif %}
+{% endblock %}

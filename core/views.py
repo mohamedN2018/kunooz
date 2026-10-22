@@ -15,10 +15,13 @@ from django.template.loader import render_to_string
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_GET
 from django.conf import settings
 
 from .models import *
 from .forms import *
+from . import ratelimit
 import json
 from datetime import datetime
 
@@ -34,46 +37,79 @@ def get_search_suggestions(query):
     """الحصول على اقتراحات البحث"""
     if len(query) < 2:
         return []
-    
-    suggestions = Post.objects.filter(
-        Q(title__icontains=query[:3])
+
+    # المنشورات المنشورة فقط حتى لا تظهر عناوين المسودات للزوار
+    suggestions = Post.objects.live().filter(
+        Q(title__icontains=query[:3]),
     ).values_list('title', flat=True).distinct()[:5]
-    
+
     return list(suggestions)
+
+
+def get_section_category(category_type):
+    """
+    أول فئة من النوع المطلوب أو None.
+    كان get_object_or_404 يُرجع 404 لصفحة القسم كاملة إذا لم توجد فئة،
+    ويُرجع خطأ 500 (MultipleObjectsReturned) إذا وُجدت أكثر من فئة من نفس النوع.
+    """
+    return Category.objects.filter(category_type=category_type).order_by('id').first()
+
+
+@require_GET
+@require_GET
+def health(request):
+    """لفحص Dokploy/Docker (كان يطلب /health كل 30 ثانية ويحصل على 404). يتحقق من قاعدة البيانات."""
+    from django.db import connection
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+    except Exception:
+        return JsonResponse({'status': 'error', 'db': False}, status=503)
+    return JsonResponse({'status': 'ok', 'db': True})
+
+
+def robots_txt(request):
+    lines = [
+        "User-agent: *",
+        "Disallow: /admin/",
+        "Disallow: /control/",
+        "Disallow: /staff/",
+        "Disallow: /analytics/",
+        "Disallow: /ads/",
+        "Disallow: /dashboard/",
+        "Disallow: /profile/",
+        "Disallow: /my-posts/",
+        "Disallow: /create-post/",
+        "Disallow: /edit-post/",
+        "Disallow: /autocomplete_search/",
+        "Disallow: /preview-post/",
+        "Disallow: /editor/",
+        "Disallow: /content/",
+        "",
+        f"Sitemap: https://{settings.MAIN_DOMAIN}/sitemap.xml",
+    ]
+    return HttpResponse("\n".join(lines) + "\n", content_type="text/plain")
 
 # ======== الصفحات الرئيسية ========
 def home(request):
     """الصفحة الرئيسية"""
-    courses_posts = Post.objects.filter(
-        category__category_type='courses', 
-        status='published'
-    ).order_by('-publish_date')[:6]
-    
-    articles_posts = Post.objects.filter(
-        category__category_type='articles', 
-        status='published'
-    ).order_by('-publish_date')[:6]
-    
-    grants_posts = Post.objects.filter(
-        category__category_type='grants', 
-        status='published'
-    ).order_by('-publish_date')[:6]
-    
-    books_posts = Post.objects.filter(
-        category__category_type='books', 
-        status='published'
-    ).order_by('-publish_date')[:6]
+    published = Post.objects.live().select_related('category')
 
-    url_media = SiteSettings.objects.first()
-    hero_sections = heroSection.objects.first()
+    def latest(category_type):
+        return list(published.filter(category__category_type=category_type).order_by('-publish_date')[:6])
 
+    # الأعداد الحقيقية لكل قسم (القالب كان يعرض عدد الشريحة المحدودة بـ 6 فيظهر "6+" دائماً كحد أقصى)
+    counts = dict(
+        published.values_list('category__category_type').annotate(n=Count('id')).values_list('category__category_type', 'n')
+    )
+
+    # url_media و hero_sections يأتيان من context processors
     return render(request, 'home.html', {
-        'courses_posts': courses_posts,
-        'articles_posts': articles_posts,
-        'grants_posts': grants_posts,
-        'books_posts': books_posts,
-        'url_media': url_media,
-        'hero_sections': hero_sections,
+        'courses_posts': latest('courses'),
+        'articles_posts': latest('articles'),
+        'grants_posts': latest('grants'),
+        'books_posts': latest('books'),
+        'section_counts': {key: counts.get(key, 0) for key, _ in Category.CATEGORY_TYPES},
     })
 
 
@@ -81,11 +117,10 @@ def home(request):
 
 def articles(request):
     """صفحة المقالات مع إحصائيات متقدمة"""
-    category = get_object_or_404(Category, category_type='articles')
-    posts_list = Post.objects.filter(
+    category = get_section_category('articles')
+    posts_list = Post.objects.live().filter(
         category__category_type='articles',
-        status='published'
-    ).order_by('-publish_date')
+    ).select_related('category', 'author').order_by('-publish_date')
     
     # إحصائيات حقيقية
     total_posts = posts_list.count()
@@ -141,11 +176,10 @@ def articles(request):
 
 def books(request):
     """صفحة الكتب والملخصات مع تصنيفات متقدمة"""
-    category = get_object_or_404(Category, category_type='books')
-    posts_list = Post.objects.filter(
+    category = get_section_category('books')
+    posts_list = Post.objects.live().filter(
         category__category_type='books',
-        status='published'
-    ).order_by('-publish_date')
+    ).select_related('category', 'author').order_by('-publish_date')
     
     # إحصائيات حقيقية
     total_books = posts_list.filter(
@@ -215,18 +249,20 @@ def books(request):
 
 def courses(request):
     """صفحة الكورسات مع تصفية متقدمة"""
-    category = get_object_or_404(Category, category_type='courses')
-    posts_list = Post.objects.filter(
+    category = get_section_category('courses')
+    posts_list = Post.objects.live().filter(
         category__category_type='courses',
-        status='published'
-    ).order_by('-publish_date')
+    ).select_related('category', 'author').order_by('-publish_date')
     
     # التصفية
     course_category = request.GET.get('category', '')
     sort_by = request.GET.get('sort', 'newest')
     
-    if course_category:
+    # ?category=abc كان يُسبب خطأ 500 لأن المعرف ليس رقماً
+    if course_category.isdigit():
         posts_list = posts_list.filter(category__id=course_category)
+    else:
+        course_category = ''
     
     if sort_by == 'popular':
         posts_list = posts_list.order_by('-views')
@@ -254,11 +290,10 @@ def courses(request):
 
 def grants(request):
     """صفحة المنح والتدريبات مع تصفية متقدمة"""
-    category = get_object_or_404(Category, category_type='grants')
-    posts_list = Post.objects.filter(
+    category = get_section_category('grants')
+    posts_list = Post.objects.live().filter(
         category__category_type='grants',
-        status='published'
-    ).order_by('-publish_date')
+    ).select_related('category', 'author').order_by('-publish_date')
     
     # المنح المميزة (التي تحتوي على كلمات مفتاحية مميزة)
     featured_grants = posts_list.filter(
@@ -278,14 +313,24 @@ def grants(request):
             Q(title__icontains='تدريب') | Q(seo_keywords__icontains='تدريب')
         )
     
+    today = timezone.localdate()
     if sort_by == 'newest':
         posts_list = posts_list.order_by('-publish_date')
     elif sort_by == 'funding':
         posts_list = posts_list.filter(seo_keywords__icontains='ممولة').order_by('-publish_date')
+    elif sort_by == 'popular':
+        posts_list = posts_list.order_by('-views')
+    elif sort_by == 'deadline':
+        # الفرص المفتوحة الأقرب موعداً أولاً، ثم بدون موعد، ثم المنتهية
+        from django.db.models import Case, When, IntegerField
+        posts_list = posts_list.annotate(_dl_group=Case(
+            When(deadline__gte=today, then=0), When(deadline__isnull=True, then=1), default=2,
+            output_field=IntegerField(),
+        )).order_by('_dl_group', 'deadline', '-publish_date')
     
-    # إحصاءات سريعة
+    # إحصاءات سريعة: فرص موعدها خلال 30 يوماً (كانت تحسب المنشورات الحديثة بدلاً من المواعيد)
     upcoming_deadlines = posts_list.filter(
-        publish_date__gte=timezone.now() - timezone.timedelta(days=30)
+        deadline__gte=today, deadline__lte=today + timezone.timedelta(days=30)
     ).count()
     
     free_opportunities = posts_list.filter(
@@ -315,18 +360,34 @@ def grants(request):
 # ======== تفاصيل المنشور ========
 def post_detail(request, slug):
     """عرض منشور معين"""
-    post = get_object_or_404(Post, slug=slug, status='published')
-    
+    post = get_object_or_404(Post.objects.live().select_related('author', 'author__profile', 'category').prefetch_related('tags'), slug=slug)
+
     # زيادة عدد المشاهدات
     post.increment_views()
+
+    # المنشورات القديمة حُفظت قبل إضافة التنظيف؛ ننظفها عند العرض أيضاً
+    post.content = sanitize_html(post.content)
     
     # الحصول على التعليقات المعتمدة فقط
     comments = post.comments.filter(is_approved=True)
     
     # معالجة نموذج التعليق
+    site = SiteSettings.objects.first()
+    comments_enabled = site.allow_comments if site else True
+    if request.method == 'POST' and 'comment_form' in request.POST and not comments_enabled:
+        messages.error(request, 'التعليقات مغلقة حالياً.')
+        return redirect('post_detail', slug=post.slug)
     if request.method == 'POST' and 'comment_form' in request.POST:
         comment_form = CommentForm(request.POST)
+        ip = ratelimit.client_ip(request)
+        # حقل مخفي للبوتات (honeypot) + حد للتعليقات لكل IP
+        if request.POST.get('website'):
+            return redirect('post_detail', slug=post.slug)
+        if ratelimit.is_limited('comment', ip, COMMENT_MAX_PER_HOUR):
+            messages.error(request, 'أرسلت تعليقات كثيرة. حاول لاحقاً.')
+            return redirect('post_detail', slug=post.slug)
         if comment_form.is_valid():
+            ratelimit.hit('comment', ip, 3600)
             comment = comment_form.save(commit=False)
             comment.post = post
             
@@ -337,16 +398,20 @@ def post_detail(request, slug):
                     comment.name = request.user.username
                 comment.email = request.user.email
             
+            # إعدادات الموقع (كانت معرفة في لوحة التحكم دون أي تأثير)
+            comment.is_approved = not (site.require_comment_approval if site else True)
             comment.save()
-            messages.success(request, 'تم إرسال تعليقك بنجاح، سيظهر بعد المراجعة.')
+            if comment.is_approved:
+                messages.success(request, 'تم نشر تعليقك، شكراً لك.')
+            else:
+                messages.success(request, 'تم إرسال تعليقك بنجاح، سيظهر بعد المراجعة.')
             return redirect('post_detail', slug=post.slug)
     else:
         comment_form = CommentForm()
     
     # الحصول على المنشورات المشابهة
-    similar_posts = Post.objects.filter(
+    similar_posts = Post.objects.live().filter(
         category=post.category,
-        status='published'
     ).exclude(id=post.id).order_by('-publish_date')[:4]
     
     return render(request, 'post_detail.html', {
@@ -354,10 +419,58 @@ def post_detail(request, slug):
         'comments': comments,
         'comment_form': comment_form,
         'similar_posts': similar_posts,
+        'comments_enabled': comments_enabled,
     })
 
 
+@login_required
+def post_preview(request, id):
+    """معاينة منشور غير منشور (مسودة/مجدول/خاص) — للكاتب أو المحرر أو الـ staff فقط، وغير قابلة للأرشفة."""
+    post = get_object_or_404(Post.objects.select_related('author', 'author__profile', 'category'), id=id)
+    if not (request.user.is_staff or post.author_id == request.user.id or is_content_editor(request.user)):
+        return HttpResponseForbidden("ليس لديك صلاحية لمعاينة هذا المنشور")
+    post.content = sanitize_html(post.content)
+    messages.info(request, f'معاينة — حالة المنشور: {post.get_status_display()}' + (' (مجدول)' if post.is_scheduled else ''))
+    response = render(request, 'post_detail.html', {
+        'post': post,
+        'comments': post.comments.none(),
+        'comment_form': CommentForm(),
+        'similar_posts': [],
+        'is_preview': True,
+    })
+    response['X-Robots-Tag'] = 'noindex, nofollow'
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
+
 # ======== إنشاء وتعديل المنشورات ========
+def can_publish(user):
+    """
+    من يحق له النشر مباشرة. السلوك القديم (كل محرر ينشر) يبقى افتراضياً؛
+    REQUIRE_EDITOR_REVIEW=True يجعل محرر المحتوى غير الـ staff يرسل للمراجعة فقط.
+    """
+    if user.is_staff or user.is_superuser:
+        return True
+    return not getattr(settings, 'REQUIRE_EDITOR_REVIEW', False)
+
+
+def apply_submit_action(request, post):
+    """يحدد حالة المنشور حسب الزر المضغوط في نموذج الإنشاء/التعديل."""
+    if 'save_draft' in request.POST:
+        post.status = Post.Status.DRAFT
+    elif 'submit_review' in request.POST:
+        post.status = Post.Status.REVIEW
+    elif 'publish_now' in request.POST:
+        if can_publish(request.user):
+            post.status = Post.Status.PUBLISHED
+            if not post.publish_date:
+                post.publish_date = timezone.now()
+        else:
+            post.status = Post.Status.REVIEW
+            messages.info(request, 'أُرسل المنشور للمراجعة، وسيُنشر بعد موافقة المشرف.')
+    elif post.status == Post.Status.PUBLISHED and not can_publish(request.user):
+        post.status = Post.Status.REVIEW
+
 @login_required
 @user_passes_test(is_content_editor)
 def create_post(request):
@@ -372,15 +485,11 @@ def create_post(request):
                     post.author = request.user
                     
                     # تحديد الحالة من الزر المضغوط
-                    if 'save_draft' in request.POST:
-                        post.status = Post.Status.DRAFT
-                    elif 'publish_now' in request.POST:
-                        post.status = Post.Status.PUBLISHED
-                        if not post.publish_date:
-                            post.publish_date = timezone.now()
+                    apply_submit_action(request, post)
                     
                     # حفظ المنشور
                     post.save()
+                    form.save_tags(post)
                     
                     messages.success(request, f'تم {"نشر" if post.status == Post.Status.PUBLISHED else "حفظ"} المنشور "{post.title}" بنجاح!')
                     
@@ -429,18 +538,16 @@ def edit_post(request, id):
         if form.is_valid():
             try:
                 with transaction.atomic():
+                    # حفظ نسخة من الحالة السابقة قبل التعديل (لإمكانية الاسترجاع)
+                    PostRevision.snapshot(Post.objects.get(pk=post.pk), request.user)
                     post = form.save(commit=False)
                     
                     # معالجة حالة النشر
-                    if 'save_draft' in request.POST:
-                        post.status = Post.Status.DRAFT
-                    elif 'publish_now' in request.POST:
-                        post.status = Post.Status.PUBLISHED
-                        if not post.publish_date:
-                            post.publish_date = timezone.now()
+                    apply_submit_action(request, post)
                     
                     # حفظ التغييرات
                     post.save()
+                    form.save_tags(post)
                     
                     messages.success(request, f'تم تحديث المنشور "{post.title}" بنجاح!')
                     
@@ -460,9 +567,29 @@ def edit_post(request, id):
         'post': post,
         'post_statuses': Post.Status.choices,
         'categories': categories,
+        'revisions': post.revisions.select_related('edited_by')[:PostRevision.KEEP_LAST],
     })
 
+
 @login_required
+@user_passes_test(is_content_editor)
+def restore_revision(request, id, revision_id):
+    """استرجاع نسخة سابقة (POST فقط). الحالة الحالية تُحفظ كنسخة أولاً فلا يضيع شيء."""
+    if request.method != 'POST':
+        return HttpResponseForbidden()
+    post = get_object_or_404(Post, id=id)
+    if not (request.user.is_staff or post.author_id == request.user.id or is_content_editor(request.user)):
+        return HttpResponseForbidden("ليس لديك صلاحية لتعديل هذا المنشور")
+    revision = get_object_or_404(PostRevision, id=revision_id, post=post)
+    with transaction.atomic():
+        PostRevision.snapshot(post, request.user)
+        post.title, post.excerpt, post.content = revision.title, revision.excerpt, revision.content
+        post.save()
+    messages.success(request, f'تم استرجاع نسخة {revision.created_at:%Y-%m-%d %H:%M}. النسخة السابقة محفوظة في السجل.')
+    return redirect('edit_post', id=post.id)
+
+@login_required
+@user_passes_test(is_content_editor)
 def delete_post(request, id):
     if request.method != 'POST':
         return HttpResponseForbidden()
@@ -470,6 +597,33 @@ def delete_post(request, id):
     post = get_object_or_404(Post, id=id, author=request.user)
     post.delete()
     return redirect('my_posts')
+
+# ======== الوسوم ========
+def tag_posts(request, slug):
+    tag = get_object_or_404(Tag, slug=slug)
+    posts = Post.objects.live().filter(tags=tag).select_related('category').order_by('-publish_date')
+    page_obj = Paginator(posts, 12).get_page(request.GET.get('page'))
+    return render(request, 'tag_posts.html', {'tag': tag, 'posts': page_obj})
+
+
+# ======== قائمة المراجعة ========
+@user_passes_test(lambda u: u.is_staff)
+def review_queue(request):
+    posts = Post.objects.filter(status=Post.Status.REVIEW).select_related('author', 'category').order_by('created_at')
+    page_obj = Paginator(posts, 20).get_page(request.GET.get('page'))
+    return render(request, 'staff/review_queue.html', {'posts': page_obj, 'title': 'منشورات بانتظار المراجعة'})
+
+
+@user_passes_test(lambda u: u.is_staff)
+def approve_post(request, id):
+    if request.method != 'POST':
+        return HttpResponseForbidden()
+    post = get_object_or_404(Post, id=id, status=Post.Status.REVIEW)
+    post.status = Post.Status.PUBLISHED
+    post.save()
+    messages.success(request, f'تم نشر "{post.title}"' + (' (مجدول)' if post.is_scheduled else ''))
+    return redirect('review_queue')
+
 
 # ======== البحث ========
 def search(request):
@@ -486,15 +640,16 @@ def search(request):
             Q(excerpt__icontains=query) |
             Q(seo_title__icontains=query) |
             Q(seo_description__icontains=query) |
-            Q(category__name__icontains=query)
-        ) & Q(status='published')
+            Q(category__name__icontains=query) |
+            Q(tags__name__icontains=query)
+        )
         
         # تطبيق فلتر الفئة إذا موجود
         if category_filter:
             search_queries &= Q(category__category_type=category_filter)
         
         # الحصول على النتائج
-        results = Post.objects.filter(search_queries).distinct()
+        results = Post.objects.live().filter(search_queries).select_related('category').distinct()
         
         # تطبيق الترتيب
         if sort_by == 'date':
@@ -560,9 +715,8 @@ def autocomplete_search(request):
     results = []
 
     if term:
-        posts = Post.objects.filter(
+        posts = Post.objects.live().filter(
             Q(title__icontains=term) | Q(content__icontains=term),
-            status='published'
         )[:10]
 
         for post in posts:
@@ -599,14 +753,26 @@ def api_upload_block_image(request):
 
 
 # ======== المصادقة والمستخدمين ========
+LOGIN_MAX_ATTEMPTS = 10
+LOGIN_WINDOW_SECONDS = 15 * 60
+COMMENT_MAX_PER_HOUR = 10
+
+
 def login_view(request):
     """تسجيل الدخول"""
     if request.user.is_authenticated:
         messages.info(request, 'أنت مسجل الدخول بالفعل!')
         return redirect('home')
     
+    ip = ratelimit.client_ip(request)
+    if request.method == 'POST' and ratelimit.is_limited('login', ip, LOGIN_MAX_ATTEMPTS):
+        messages.error(request, 'محاولات دخول كثيرة. حاول مرة أخرى بعد 15 دقيقة.')
+        return render(request, 'auth/login.html', {'form': LoginForm()}, status=429)
+
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
+        if not form.is_valid():
+            ratelimit.hit('login', ip, LOGIN_WINDOW_SECONDS)
         if form.is_valid():
             username = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
@@ -616,6 +782,7 @@ def login_view(request):
             
             if user is not None:
                 login(request, user)
+                ratelimit.reset('login', ip)
                 
                 if not remember_me:
                     request.session.set_expiry(0)
@@ -623,8 +790,13 @@ def login_view(request):
                     request.session.set_expiry(1209600)
                 
                 messages.success(request, f'مرحباً بك {user.username}!')
-                
-                next_url = request.GET.get('next', 'home')
+
+                # منع إعادة التوجيه لمواقع خارجية (?next=https://evil.example)
+                next_url = request.POST.get('next') or request.GET.get('next')
+                if not next_url or not url_has_allowed_host_and_scheme(
+                    next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+                ):
+                    next_url = 'home'
                 return redirect(next_url)
             else:
                 messages.error(request, 'اسم المستخدم أو كلمة المرور غير صحيحة!')
@@ -981,6 +1153,7 @@ def content_dashboard(request):
         'draft_posts': draft_posts,
         'recent_posts': recent_posts,
         'new_comments': new_comments,
+        'review_posts': Post.objects.filter(status=Post.Status.REVIEW).count(),
         'total_views': total_views,
         'posts_by_type': posts_by_type,
         'is_staff': user.is_staff,
@@ -1096,7 +1269,7 @@ def admin_dashboard(request):
 @staff_member_required
 def manage_comments(request):
     """إدارة جميع التعليقات"""
-    comments = Comment.objects.all().select_related('post', 'user').order_by('-created_at')
+    comments = Comment.objects.all().select_related('post').order_by('-created_at')
     
     paginator = Paginator(comments, 20)
     page = request.GET.get('page', 1)
@@ -1129,7 +1302,7 @@ def approve_comment(request, comment_id):
             return JsonResponse({'success': True, 'message': 'تم قبول التعليق بنجاح'})
         
         messages.success(request, 'تم قبول التعليق بنجاح')
-        return redirect('manage_comments')
+        return redirect('control_comments')
     
     return JsonResponse({'success': False, 'message': 'طريقة الطلب غير صحيحة'})
 
@@ -1145,7 +1318,7 @@ def reject_comment(request, comment_id):
             return JsonResponse({'success': True, 'message': 'تم رفض التعليق بنجاح'})
         
         messages.success(request, 'تم رفض التعليق بنجاح')
-        return redirect('manage_comments')
+        return redirect('control_comments')
     
     return JsonResponse({'success': False, 'message': 'طريقة الطلب غير صحيحة'})
 
@@ -1161,10 +1334,10 @@ def bulk_approve_comments(request):
             messages.success(request, f'تم قبول {len(comment_ids)} تعليق')
         else:
             messages.warning(request, 'لم يتم تحديد أي تعليق')
-        
-        return redirect('manage_comments')
-    
-    return redirect('manage_comments')
+
+        return redirect('control_comments')
+
+    return redirect('control_comments')
 
 
 @staff_member_required
@@ -1178,10 +1351,10 @@ def bulk_delete_comments(request):
             messages.success(request, f'تم حذف {deleted_count} تعليق')
         else:
             messages.warning(request, 'لم يتم تحديد أي تعليق')
-        
-        return redirect('manage_comments')
-    
-    return redirect('manage_comments')
+
+        return redirect('control_comments')
+
+    return redirect('control_comments')
 
 
 @login_required
@@ -1230,8 +1403,11 @@ def admin_settings(request):
     except SiteSettings.DoesNotExist:
         site_settings = SiteSettings.objects.create()
     
+    if site_settings is None:
+        site_settings = SiteSettings.objects.create()
+
     if request.method == 'POST':
-        form = SiteSettingsForm(request.POST, instance=site_settings)
+        form = SiteSettingsForm(request.POST, request.FILES, instance=site_settings)
         if form.is_valid():
             form.save()
             messages.success(request, 'تم حفظ الإعدادات بنجاح')
@@ -1300,15 +1476,16 @@ def edit_user_role(request, user_id):
 @user_passes_test(lambda u: u.is_superuser)
 def system_logs(request):
     """عرض سجلات النظام"""
-    logs = SystemLog.objects.all().order_by('-created_at')[:100]
-    
+    all_logs = SystemLog.objects.all()
+    logs = all_logs.order_by('-created_at')[:100]
+
     return render(request, 'admin/system_logs.html', {
         'logs': logs,
         'title': 'سجلات النظام',
-        'log_count': logs.count(),
-        'error_count': logs.filter(log_type='error').count(),
-        'warning_count': logs.filter(log_type='warning').count(),
-        'info_count': logs.filter(log_type='info').count(),
+        'log_count': all_logs.count(),
+        'error_count': all_logs.filter(log_type='error').count(),
+        'warning_count': all_logs.filter(log_type='warning').count(),
+        'info_count': all_logs.filter(log_type='info').count(),
     })
 
 
@@ -1332,6 +1509,8 @@ def staff_dashboard(request):
         'draft_posts': draft_posts,
         'recent_posts': recent_posts,
         'new_comments': new_comments,
+        'review_posts': Post.objects.filter(status=Post.Status.REVIEW).count(),
+        'is_staff': True,
         'total_views': total_views,
         'user': user,
     })
@@ -1411,7 +1590,8 @@ def handler404(request, exception):
 
 
 def handler500(request):
-    return render(request, 'errors/500.html', status=500)
+    # بدون context processors (قد تكون قاعدة البيانات هي سبب الخطأ)
+    return HttpResponse(render_to_string('errors/500.html'), status=500)
 
 
 def handler403(request, exception):

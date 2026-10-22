@@ -1,6 +1,7 @@
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from . import views
+from .editor import upload_editor_image
 
 urlpatterns = [
     # الصفحات الرئيسية والتصفح
@@ -41,6 +42,12 @@ urlpatterns = [
     # إدارة المحتوى (للمستخدمين العاديين/المؤلفين)
     path('create-post/', views.create_post, name='create_post'),
     path('edit-post/<int:id>/', views.edit_post, name='edit_post'),
+    path('preview-post/<int:id>/', views.post_preview, name='post_preview'),
+    path('editor/upload-image/', upload_editor_image, name='editor_upload_image'),
+    path('edit-post/<int:id>/restore/<int:revision_id>/', views.restore_revision, name='restore_revision'),
+    path('tag/<str:slug>/', views.tag_posts, name='tag_posts'),
+    path('staff/review/', views.review_queue, name='review_queue'),
+    path('staff/review/<int:id>/publish/', views.approve_post, name='approve_post'),
     path('delete-post/<int:id>/', views.delete_post, name='delete_post'),
     path('my-posts/comments/', views.view_comments_on_my_posts, name='my_comments'),
     path('my-posts/', views.my_posts, name='my_posts'),
@@ -67,8 +74,4 @@ urlpatterns = [
     path('control/comments/bulk-delete/', views.bulk_delete_comments, name='control_comments_bulk_delete'),
 ]
 
-# معالجات الأخطاء
-handler404 = views.handler404
-handler500 = views.handler500
-handler403 = views.handler403
-handler400 = views.handler400
+# معالجات الأخطاء مُعرّفة في kunooz/urls.py (Django يقرأها من الـ ROOT_URLCONF فقط)

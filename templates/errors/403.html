@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}غير مسموح - كنوز{% endblock %}
+{% block meta %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+<section class="max-w-2xl mx-auto px-4 py-20 text-center">
+    <p class="text-7xl font-extrabold text-yellow-500">403</p>
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mt-4">ليس لديك صلاحية للوصول لهذه الصفحة</h1>
+    <a href="{% url 'home' %}" class="inline-block mt-6 text-blue-600 dark:text-blue-400 hover:underline">العودة للرئيسية</a>
+</section>
+{% endblock %}

@@ -1,0 +1,35 @@
+/* محرر Jodit: خط الموقع وتنسيق مطابق لصفحة المنشور */
+.jodit-container:not(.jodit_inline) {
+    border-radius: 0.75rem;
+    overflow: hidden;
+    border-color: #d1d5db;
+}
+.jodit-container,
+.jodit-container .jodit-toolbar-button__text,
+.jodit-container .jodit-ui-input__input,
+.jodit-popup,
+.jodit-dialog {
+    font-family: 'Cairo', sans-serif;
+}
+.jodit-wysiwyg {
+    font-family: 'Cairo', sans-serif;
+    font-size: 16px;
+    line-height: 1.9;
+    padding: 1rem 1.25rem !important;
+}
+.jodit-wysiwyg h2 { font-size: 1.5rem; font-weight: 700; margin: 1.2em 0 .5em; }
+.jodit-wysiwyg h3 { font-size: 1.25rem; font-weight: 700; margin: 1em 0 .4em; }
+.jodit-wysiwyg h4 { font-size: 1.1rem; font-weight: 700; margin: .8em 0 .3em; }
+.jodit-wysiwyg blockquote { border-right: 4px solid #3b82f6; padding: .5rem 1rem; margin: 1rem 0; background: #f8fafc; }
+.jodit-wysiwyg img { max-width: 100%; height: auto; border-radius: .5rem; }
+.jodit-wysiwyg table { border-collapse: collapse; width: 100%; }
+.jodit-wysiwyg td, .jodit-wysiwyg th { border: 1px solid #d1d5db; padding: .4rem .6rem; }
+.jodit-wysiwyg ul { list-style: disc; padding-right: 1.5rem; }
+.jodit-wysiwyg ol { list-style: decimal; padding-right: 1.5rem; }
+
+.dark .jodit-container:not(.jodit_inline) { border-color: #4b5563; }
+.dark .jodit-wysiwyg blockquote { background: #1f2937; }
+.dark .jodit-wysiwyg td, .dark .jodit-wysiwyg th { border-color: #4b5563; }
+
+/* داخل لوحة Django Admin */
+.form-row .jodit-container, .form-group .jodit-container { max-width: 100%; }

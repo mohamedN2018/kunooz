@@ -466,8 +466,8 @@
                         <div class="post-item bg-white dark:bg-gray-800">
                             <!-- صورة المنشور -->
                             <div class="relative">
-                                {% if post.thumbnail or post.featured_image or post.image %}
-                                <img src="{% if post.thumbnail %}{{ post.thumbnail.url }}{% elif post.featured_image %}{{ post.featured_image.url }}{% else %}{{ post.image.url }}{% endif %}" 
+                                {% if post.card_image %}
+                                <img src="{{ post.card_image.url }}" 
                                      alt="{{ post.title }}" 
                                      class="post-image">
                                 {% else %}

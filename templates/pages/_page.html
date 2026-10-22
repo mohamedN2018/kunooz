@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block ad_header %}{% endblock %}{% block ad_footer %}{% endblock %}
+{% block content %}
+<section class="bg-gradient-to-l from-blue-600 to-emerald-600 text-white py-12">
+    <div class="max-w-3xl mx-auto px-4">
+        <h1 class="text-3xl md:text-4xl font-bold">{% block page_title %}{% endblock %}</h1>
+        {% block page_lead %}{% endblock %}
+    </div>
+</section>
+<article class="max-w-3xl mx-auto px-4 py-10 text-gray-700 dark:text-gray-300 leading-loose space-y-5 page-body">
+    {% block page_body %}{% endblock %}
+</article>
+<style>
+    .page-body h2 { font-size: 1.35rem; font-weight: 700; color: inherit; margin-top: 2rem; }
+    .page-body h2 { color: #1f2937; } .dark .page-body h2 { color: #f3f4f6; }
+    .page-body ul { list-style: disc; padding-right: 1.5rem; }
+    .page-body a { color: #2563eb; text-decoration: underline; }
+    .dark .page-body a { color: #93c5fd; }
+</style>
+{% endblock %}

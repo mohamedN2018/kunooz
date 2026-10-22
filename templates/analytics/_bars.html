@@ -1,0 +1,20 @@
+{% load analytics_tags %}
+<section class="az-card p-5">
+    <h2 class="az-title mb-1">{{ title }}</h2>
+    {% if sub %}<p class="az-sub mb-3">{{ sub }}</p>{% endif %}
+    {% if items %}
+    <ul class="az-bars space-y-3 mt-3">
+        {% with top=items.0.count %}
+        {% for it in items %}
+        <li>
+            <span class="name" title="{{ it.name }}">{{ it.name }}</span>
+            <span class="val">{{ it.count }}{% if it.pct is not None %} <span class="az-sub">({{ it.pct }}%)</span>{% endif %}</span>
+            <span class="track" aria-hidden="true"><span class="fill" style="width: {% widthpct it.count top %}%"></span></span>
+        </li>
+        {% endfor %}
+        {% endwith %}
+    </ul>
+    {% else %}
+    <p class="az-sub py-6 text-center">لا توجد بيانات في هذه الفترة</p>
+    {% endif %}
+</section>

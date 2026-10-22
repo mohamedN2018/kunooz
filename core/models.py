@@ -5,14 +5,71 @@ from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 from django.conf import settings
-from ckeditor.fields import RichTextField
 from PIL import Image
 import os
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 import datetime
-from ckeditor.fields import RichTextField
+import re
+import logging
 from django.core.exceptions import ValidationError
+
+try:
+    import bleach
+    from bleach.css_sanitizer import CSSSanitizer
+except ImportError:  # يجب تثبيت bleach[css] (موجودة في requirements.txt و Pipfile)
+    bleach = None
+    logging.getLogger(__name__).warning("bleach غير مثبتة؛ يتم استخدام تنظيف HTML أساسي فقط")
+
+
+# وسوم HTML المسموحة في محتوى المنشورات (يُعرض بـ |safe لذا يجب تنظيفه من السكربتات)
+ALLOWED_CONTENT_TAGS = {
+    'p', 'br', 'hr', 'div', 'span', 'blockquote', 'pre', 'code',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'strong', 'b', 'em', 'i', 'u', 's', 'sub', 'sup', 'small', 'mark',
+    'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+    'a', 'img', 'figure', 'figcaption',
+    'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'colgroup', 'col',
+    'iframe',
+}
+ALLOWED_CONTENT_ATTRS = {
+    '*': ['class', 'style', 'dir', 'lang', 'title'],
+    'a': ['href', 'target', 'rel', 'name'],
+    'img': ['src', 'alt', 'width', 'height', 'loading'],
+    'td': ['colspan', 'rowspan', 'align'],
+    'th': ['colspan', 'rowspan', 'align', 'scope'],
+    'table': ['border', 'cellpadding', 'cellspacing'],
+    'iframe': ['src', 'width', 'height', 'allow', 'allowfullscreen', 'frameborder'],
+}
+TRUSTED_IFRAME_PREFIXES = (
+    'https://www.youtube.com/embed/', 'https://www.youtube-nocookie.com/embed/',
+    'https://player.vimeo.com/video/',
+)
+
+
+def _filter_attr(tag, name, value):
+    if tag == 'iframe' and name == 'src':
+        return value.startswith(TRUSTED_IFRAME_PREFIXES)
+    return name in ALLOWED_CONTENT_ATTRS.get(tag, []) or name in ALLOWED_CONTENT_ATTRS['*']
+
+
+def sanitize_html(html):
+    """يزيل السكربتات وخصائص on* وروابط javascript: مع الحفاظ على التنسيق."""
+    if not html:
+        return html
+    if bleach is None:
+        html = re.sub(r'(?is)<(script|style|object|embed)\b.*?</\1\s*>', '', html)
+        html = re.sub(r'(?i)\s+on[a-z]+\s*=\s*(".*?"|\'.*?\'|[^\s>]+)', '', html)
+        return re.sub(r'(?i)(href|src)\s*=\s*(["\']?)\s*javascript:', r'\1=\2#', html)
+    return bleach.clean(
+        html,
+        tags=ALLOWED_CONTENT_TAGS,
+        attributes=_filter_attr,
+        protocols={'http', 'https', 'mailto', 'tel'},
+        css_sanitizer=CSSSanitizer(),
+        strip=True,
+        strip_comments=True,
+    )
 
 
 class Category(models.Model):
@@ -41,9 +98,49 @@ class Category(models.Model):
         return f"{reverse('search')}?category={self.category_type}"
 
 
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True, verbose_name="الوسم")
+    slug = models.SlugField(max_length=60, unique=True, allow_unicode=True, verbose_name="الرابط")
+
+    class Meta:
+        verbose_name = 'وسم'
+        verbose_name_plural = 'الوسوم'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.name, allow_unicode=True)[:50] or "tag"
+            slug, i = base, 1
+            while Tag.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base}-{i}"
+                i += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse("tag_posts", kwargs={"slug": self.slug})
+
+
+class PostQuerySet(models.QuerySet):
+    def live(self):
+        """
+        المنشورات الظاهرة للزوار: حالتها "منشور" وتاريخ نشرها حلّ.
+        منشور بتاريخ مستقبلي = نشر مجدول، يظهر تلقائياً عند حلول التاريخ (بدون cron).
+        """
+        return self.filter(status=Post.Status.PUBLISHED).filter(
+            models.Q(publish_date__isnull=True) | models.Q(publish_date__lte=timezone.now())
+        )
+
+
 class Post(models.Model):
+    objects = PostQuerySet.as_manager()
+
     class Status(models.TextChoices):
         DRAFT = 'draft', 'مسودة'
+        REVIEW = 'review', 'قيد المراجعة'
         PUBLISHED = 'published', 'منشور'
         PRIVATE = 'private', 'خاص'
         ARCHIVED = 'archived', 'مؤرشف'
@@ -55,7 +152,8 @@ class Post(models.Model):
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='posts', verbose_name="المؤلف")
 
     # المحتوى
-    content = RichTextField(verbose_name="المحتوى")
+    # كان RichTextField من django-ckeditor (CKEditor 4 منتهي الدعم وبه ثغرات)؛ المحرر الآن Jodit في الواجهة
+    content = models.TextField(verbose_name="المحتوى")
     
     # الصور (القديم والجديد معاً)
     image = models.ImageField(upload_to='posts/featured/%Y/%m/%d/', blank=True, verbose_name="الصورة القديمة")
@@ -63,6 +161,9 @@ class Post(models.Model):
     thumbnail = models.ImageField(upload_to='posts/thumbnails/%Y/%m/', blank=True, verbose_name="الصورة المصغرة")
 
     excerpt = models.TextField(max_length=300, blank=True, verbose_name="الملخص")
+    tags = models.ManyToManyField(Tag, blank=True, related_name='posts', verbose_name="الوسوم")
+    deadline = models.DateField(blank=True, null=True, verbose_name="آخر موعد للتقديم",
+                                help_text="للمنح والتدريبات: يظهر للزائر ويُستخدم في الترتيب")
 
     # الروابط
     link = models.URLField(blank=True, null=True, verbose_name="رابط خارجي")
@@ -101,6 +202,9 @@ class Post(models.Model):
                 i += 1
             self.slug = slug
         
+        # تنظيف المحتوى من HTML خطير (XSS) لأنه يُعرض بدون escaping
+        self.content = sanitize_html(self.content)
+
         # نشر تلقائي
         if self.status == self.Status.PUBLISHED and not self.publish_date:
             self.publish_date = timezone.now()
@@ -124,13 +228,29 @@ class Post(models.Model):
             os.makedirs(os.path.dirname(thumb_path), exist_ok=True)
             image.save(thumb_path)
             
-            self.thumbnail.name = thumb_path.split("media/")[-1]
-            self.save(update_fields=["thumbnail"])
+            # os.path.relpath يعمل على Windows و Linux (split("media/") كان يفشل مع \ في Windows)
+            self.thumbnail.name = os.path.relpath(thumb_path, settings.MEDIA_ROOT).replace(os.sep, "/")
+            Post.objects.filter(pk=self.pk).update(thumbnail=self.thumbnail.name)
         except Exception as e:
-            print(f"خطأ في إنشاء الصورة المصغرة: {e}")
+            import logging
+            logging.getLogger(__name__).warning("خطأ في إنشاء الصورة المصغرة للمنشور %s: %s", self.pk, e)
 
     def get_absolute_url(self):
         return reverse("post_detail", kwargs={"slug": self.slug})
+
+    @property
+    def deadline_passed(self):
+        return bool(self.deadline) and self.deadline < timezone.localdate()
+
+    @property
+    def days_to_deadline(self):
+        if not self.deadline:
+            return None
+        return (self.deadline - timezone.localdate()).days
+
+    @property
+    def is_scheduled(self):
+        return self.status == self.Status.PUBLISHED and bool(self.publish_date) and self.publish_date > timezone.now()
 
     def increment_views(self):
         Post.objects.filter(pk=self.pk).update(views=models.F("views") + 1)
@@ -141,12 +261,60 @@ class Post(models.Model):
 
     @property
     def display_description(self):
-        return self.seo_description or self.excerpt or self.content[:160]
+        from django.utils.html import strip_tags
+        return self.seo_description or self.excerpt or strip_tags(self.content)[:160]
     
+    @property
+    def card_image(self):
+        """
+        صورة البطاقات: المصغرة إن كان مسارها سليماً، وإلا الصورة الرئيسية.
+        (منشورات قديمة حُفظت مصغرتها بمسار Windows مطلق مثل C:\\Users\\... فتظهر مكسورة)
+        """
+        name = self.thumbnail.name if self.thumbnail else ''
+        if name and ':' not in name and not name.startswith(('/', '\\')):
+            return self.thumbnail
+        return self.get_main_image
+
     @property
     def get_main_image(self):
         """الحصول على الصورة الرئيسية (الأفضلية للصورة الجديدة ثم القديمة)"""
         return self.featured_image or self.image
+
+
+class PostRevision(models.Model):
+    """نسخة سابقة من المنشور تُحفظ تلقائياً قبل كل تعديل، ويمكن استرجاعها."""
+    KEEP_LAST = 20
+
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='revisions', verbose_name="المنشور")
+    title = models.CharField(max_length=200, verbose_name="العنوان")
+    excerpt = models.TextField(blank=True, verbose_name="الملخص")
+    content = models.TextField(verbose_name="المحتوى")
+    status = models.CharField(max_length=10, verbose_name="الحالة")
+    edited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                  verbose_name="بواسطة")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاريخ النسخة")
+
+    class Meta:
+        verbose_name = 'نسخة سابقة'
+        verbose_name_plural = 'النسخ السابقة'
+        ordering = ['-created_at', '-id']
+
+    def __str__(self):
+        return f'{self.title} — {self.created_at:%Y-%m-%d %H:%M}'
+
+    def get_status_display(self):
+        return dict(Post.Status.choices).get(self.status, self.status)
+
+    @classmethod
+    def snapshot(cls, post, user=None):
+        """يحفظ نسخة من حالة المنشور الحالية في قاعدة البيانات ويحذف ما زاد عن KEEP_LAST."""
+        rev = cls.objects.create(
+            post=post, title=post.title, excerpt=post.excerpt or '', content=post.content or '',
+            status=post.status, edited_by=user if getattr(user, 'is_authenticated', False) else None,
+        )
+        old_ids = cls.objects.filter(post=post).values_list('id', flat=True)[cls.KEEP_LAST:]
+        cls.objects.filter(id__in=list(old_ids)).delete()
+        return rev
 
 
 class Comment(models.Model):
@@ -185,12 +353,30 @@ class SiteSettings(models.Model):
     instagram_url = models.URLField(blank=True, null=True, verbose_name="رابط إنستغرام")
     youtube_url = models.URLField(blank=True, null=True, verbose_name="رابط يوتيوب")
     
+    # الإعلانات
+    ads_enabled = models.BooleanField(default=False, verbose_name="تفعيل الإعلانات في الموقع",
+                                      help_text="مغلق افتراضياً. للمعاينة بدون تفعيل: افتح أي صفحة بـ ?ads_preview=1 وأنت مسجل كمشرف")
+    adsense_client = models.CharField(max_length=40, blank=True, verbose_name="معرف Google AdSense",
+                                      help_text="مثل ca-pub-1234567890123456 — يُحمَّل سكربت AdSense فقط عند تعبئته وتفعيل الإعلانات")
+    ads_txt = models.TextField(blank=True, verbose_name="محتوى ads.txt",
+                               help_text="يُعرض على /ads.txt — شبكة الإعلانات (مثل AdSense) تعطيك السطر المطلوب")
+
+    # صفحات قانونية (فارغة = نص افتراضي يصف ما يجمعه الموقع فعلاً)
+    about_content = models.TextField(blank=True, verbose_name="نص صفحة من نحن")
+    privacy_content = models.TextField(blank=True, verbose_name="نص سياسة الخصوصية")
+
     # التواريخ
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاريخ الإنشاء")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث")
     
     def __str__(self):
         return self.site_name
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        from django.core.cache import cache
+        cache.delete('site_maintenance_mode')  # يطبق وضع الصيانة فوراً
+        cache.delete('kz_ad_slots')
     
     class Meta:
         verbose_name = 'إعدادات الموقع'

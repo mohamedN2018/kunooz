@@ -1,42 +1,30 @@
 {% extends 'base.html' %}
+{% load ad_tags %}
 
 {% block title %}{{ post.display_title }} - كنوز{% endblock %}
 {% block extra_head %}
-    <script type="application/ld+json">
-        {
-        "@context": "https://schema.org",
-        "@type": "Article",
-        "headline": "{{ post.display_title }}",
-        "image": "{{ post.get_main_image.url }}",
-        "author": {
-        "@type": "Person",
-        "name": "{{ post.author }}"
-        },
-        "datePublished": "{{ post.publish_date|date:'Y-m-d' }}",
-        "dateModified": "{{ post.updated_at|date:'Y-m-d' }}",
-        "mainEntityOfPage": {
-        "@type": "WebPage",
-        "@id": "{{ request.build_absolute_uri }}"
-        }
-        }
-    </script>
+    {% load seo_tags %}{% post_jsonld post url_media %}
 {% endblock %}
 
 {% block meta %}
-    <meta name="description" content="{{ post.display_description }}">
-    <meta name="keywords" content="{{ post.seo_keywords|default:'' }}">
+    {% if is_preview %}<meta name="robots" content="noindex, nofollow">{% endif %}
+    <meta name="description" content="{{ post.display_description|striptags|truncatechars:160 }}">
+    {% if post.seo_keywords %}<meta name="keywords" content="{{ post.seo_keywords }}">{% endif %}
+    <link rel="canonical" href="https://{{ request.get_host }}{{ post.get_absolute_url }}">
+    <meta property="og:type" content="article">
+    <meta property="og:locale" content="ar_AR">
     <meta property="og:title" content="{{ post.display_title }}">
-    <meta property="og:description" content="{{ post.display_description }}">
-    <meta property="og:image" content="{% if post.featured_image %}{{ post.featured_image.url }}{% elif post.image %}{{ post.image.url }}{% endif %}">
-    <meta property="og:url" content="{{ request.build_absolute_uri }}">
-    <meta name="twitter:card" content="summary_large_image">
-
-    <title>{{ post.display_title }}</title>
-
-    <meta name="description" content="{{ post.display_description }}">
-    <meta name="keywords" content="{{ post.seo_keywords }}">
-
-    <link rel="canonical" href="{{ request.build_absolute_uri }}">
+    <meta property="og:description" content="{{ post.display_description|striptags|truncatechars:200 }}">
+    {% if post.get_main_image %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ post.get_main_image.url }}">{% endif %}
+    <meta property="og:url" content="https://{{ request.get_host }}{{ post.get_absolute_url }}">
+    {% if post.publish_date %}<meta property="article:published_time" content="{{ post.publish_date|date:'c' }}">{% endif %}
+    <meta property="og:site_name" content="{{ url_media.site_name|default:'كنوز' }}">
+    {% if post.updated_at %}<meta property="article:modified_time" content="{{ post.updated_at|date:'c' }}">{% endif %}
+    {% for tag in post.tags.all %}<meta property="article:tag" content="{{ tag.name }}">{% endfor %}
+    <meta name="twitter:card" content="{% if post.get_main_image %}summary_large_image{% else %}summary{% endif %}">
+    <meta name="twitter:title" content="{{ post.display_title }}">
+    <meta name="twitter:description" content="{{ post.display_description|striptags|truncatechars:200 }}">
+    {% if post.get_main_image %}<meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ post.get_main_image.url }}">{% endif %}
 
 {% endblock %}
 
@@ -61,6 +49,18 @@
 <!-- المقال الرئيسي -->
 <article class="py-8">
     <div class="container mx-auto px-4 max-w-4xl">
+        <!-- مسار التنقل -->
+        <nav aria-label="مسار التنقل" class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+            <ol class="flex flex-wrap items-center gap-1">
+                <li><a href="{% url 'home' %}" class="hover:text-blue-600 dark:hover:text-blue-400">الرئيسية</a></li>
+                {% with ct=post.category.category_type %}{% if ct == 'courses' or ct == 'articles' or ct == 'grants' or ct == 'books' %}
+                <li aria-hidden="true">/</li>
+                <li><a href="{% url ct %}" class="hover:text-blue-600 dark:hover:text-blue-400">{{ post.category.get_category_type_display }}</a></li>
+                {% endif %}{% endwith %}
+                <li aria-hidden="true">/</li>
+                <li class="text-gray-700 dark:text-gray-300 truncate max-w-[16rem]" aria-current="page">{{ post.title }}</li>
+            </ol>
+        </nav>
         <!-- العنوان -->
         <h1 class="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-4 leading-tight">{{ post.title }}</h1>
         
@@ -109,7 +109,7 @@
         <!-- صورة المقال -->
         {% if post.featured_image %}
         <div class="mb-8 rounded-xl overflow-hidden shadow-lg">
-            <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" 
+            <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" fetchpriority="high" decoding="async"
                  class="w-full h-auto max-h-[500px] object-cover">
         </div>
         {% elif post.image %}
@@ -132,10 +132,35 @@
     </div>
         {% endif %}
         
+        {% if post.deadline %}
+        <div class="mb-8 p-4 rounded-xl border {% if post.deadline_passed %}bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700{% else %}bg-orange-50 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800{% endif %} flex items-center gap-3">
+            <i class="fas fa-hourglass-half text-xl {% if post.deadline_passed %}text-gray-400{% else %}text-orange-500{% endif %}"></i>
+            <div>
+                <div class="font-bold text-gray-800 dark:text-white">آخر موعد للتقديم: {{ post.deadline|date:"j F Y" }}</div>
+                <div class="text-sm {% if post.deadline_passed %}text-gray-500{% else %}text-orange-700 dark:text-orange-300{% endif %}">
+                    {% if post.deadline_passed %}انتهى موعد التقديم{% elif post.days_to_deadline == 0 %}اليوم آخر يوم للتقديم{% else %}متبقٍ {{ post.days_to_deadline }} يوم{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if not is_preview %}{% ad_slot 'post_top' %}{% endif %}
+
         <!-- محتوى المقال -->
         <div class="post-content prose prose-lg max-w-none mb-12 dark:prose-invert transition-colors duration-300">
             {{ post.content|safe }}
         </div>
+
+        {% with post_tags=post.tags.all %}
+        {% if post_tags %}
+        <div class="mb-12 flex flex-wrap items-center gap-2">
+            <span class="text-sm text-gray-500 dark:text-gray-400 ml-1"><i class="fas fa-tags ml-1"></i> الوسوم:</span>
+            {% for tag in post_tags %}
+            <a href="{{ tag.get_absolute_url }}" rel="tag" class="text-sm px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/40 dark:hover:text-blue-300 transition">#{{ tag.name }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
         
         <!-- رابط المنشور -->
         {% if post.link %}
@@ -198,6 +223,8 @@
         </div>
         {% endif %}
         
+        {% if not is_preview %}{% ad_slot 'post_bottom' %}{% endif %}
+
         <!-- المشاركة -->
         <div class="mb-12 p-8 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-lg transition-colors duration-300">
             <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-6 text-center transition-colors duration-300">
@@ -235,11 +262,15 @@
             </div>
             
             <!-- نموذج إضافة تعليق -->
+            {% if comments_enabled is False %}
+            <p class="mb-8 p-4 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-center">التعليقات مغلقة على هذا المنشور.</p>
+            {% elif not is_preview %}
             <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg mb-8 border border-gray-100 dark:border-gray-700 transition-colors duration-300" id="commentForm">
                 <h4 class="text-lg font-bold text-gray-800 dark:text-white mb-6 transition-colors duration-300">أضف تعليقك</h4>
                 <form method="post">
                     {% csrf_token %}
                     <input type="hidden" name="comment_form" value="1">
+                    <div aria-hidden="true" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap"><label>اترك هذا الحقل فارغاً<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div>
@@ -276,6 +307,7 @@
                         </div>
                     </form>
                 </div>
+            {% endif %}
                 
                 <!-- قائمة التعليقات -->
                 {% if comments %}
@@ -330,14 +362,8 @@
                     {% for similar in similar_posts %}
                     <a href="{% url 'post_detail' similar.slug %}" 
                        class="group bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-                        {% if similar.thumbnail %}
-                        <img src="{{ similar.thumbnail.url }}" alt="{{ similar.title }}" 
-                             class="w-full h-48 object-cover group-hover:scale-105 transition duration-300">
-                        {% elif similar.featured_image %}
-                        <img src="{{ similar.featured_image.url }}" alt="{{ similar.title }}" 
-                             class="w-full h-48 object-cover group-hover:scale-105 transition duration-300">
-                        {% elif similar.image %}
-                        <img src="{{ similar.image.url }}" alt="{{ similar.title }}" 
+                        {% if similar.card_image %}
+                        <img src="{{ similar.card_image.url }}" alt="{{ similar.title }}" loading="lazy" decoding="async"
                              class="w-full h-48 object-cover group-hover:scale-105 transition duration-300">
                         {% else %}
                         <div class="w-full h-48 bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center">
