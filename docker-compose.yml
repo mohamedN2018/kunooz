@@ -34,6 +34,15 @@ services:
       - postgresql_data:/var/lib/postgresql/data
     restart: always
 
+networks:
+  default:
+    # شبكة بعنوان ثابت: Docker على السيرفر استنفد عناوين الشبكات الافتراضية
+    # ("all predefined address pools have been fully subnetted") فكان يفشل إنشاء شبكة المشروع.
+    # النطاق خارج النطاقات الافتراضية لـ Docker فلا يحتاج للـ pool.
+    ipam:
+      config:
+        - subnet: 10.201.77.0/24
+
 volumes:
   postgresql_data:
   django-folder:
